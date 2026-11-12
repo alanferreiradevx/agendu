@@ -30,7 +30,7 @@
     <div class="card">
       <h2>Pagamentos</h2>
       <ul class="lista-limpa">
-      {% for l in lancamentos %}<li><span class="cresce">{{ l.data|date:"d/m/Y" }} · {{ l.forma|default:"—" }}{% if l.parcelas > 1 %} ({{ l.parcelas }}x){% endif %}</span><strong>{% valor l.valor %}</strong></li>
+      {% for l in lancamentos %}<li><span class="cresce">{{ l.data|date:"d/m/Y" }} · {{ l.forma|default:"—" }}{% if l.parcelas > 1 %} em {{ l.parcelas }}x{% endif %}</span><strong>{% valor l.valor %}</strong></li>
       {% empty %}<li class="suave">Nenhum pagamento registrado.</li>{% endfor %}
       </ul>
     </div>
@@ -39,8 +39,7 @@
       <h2>Registrar pagamento</h2>
       <div class="form-grid">
         {% include "_campo.html" with campo=form.valor %}
-        {% include "_campo.html" with campo=form.forma %}
-        {% include "_campo.html" with campo=form.parcelas %}
+        {% include "_pagamento.html" with forma=form.forma parcelas=form.parcelas parcelaveis=form.parcelaveis %}
       </div>
       <div class="botoes-form"><button class="btn" type="submit">Registrar</button></div>
     </form>

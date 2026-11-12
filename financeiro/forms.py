@@ -3,6 +3,7 @@ from django import forms
 from clientes.models import Cliente
 from core.campos import DATA, DINHEIRO
 
+from . import pagamento
 from .models import FormaPagamento, Lancamento
 
 
@@ -17,14 +18,22 @@ class LancamentoForm(forms.ModelForm):
         self.instance.tipo = tipo
         entrada = tipo == Lancamento.ENTRADA
         self.fields["categoria"].choices = Lancamento.CATEGORIAS_ENTRADA if entrada else Lancamento.CATEGORIAS_SAIDA
-        self.fields["forma"].queryset = FormaPagamento.objects.filter(ativo=True)
+        pagamento.preparar(self, vazio="Não informar")
+        self.fields["forma"].required = False
         self.fields["cliente"].queryset = Cliente.objects.filter(ativo=True)
         self.fields["cliente"].required = False
         self.fields["valor"].min_value = 0.01
-        if not entrada:
+        if entrada:
+            self.fields["parcelas"] = pagamento.campo_parcelas()
+        else:
             del self.fields["parcelas"]
             del self.fields["cliente"]
             self.fields["forma"].help_text = "Opcional. Despesa não desconta taxa."
+
+    def clean(self):
+        dados = super().clean()
+        pagamento.ajustar_parcelas(self, dados)
+        return dados
 
     def save(self, commit=True):
         lanc = super().save(commit=False)
@@ -36,6 +45,6 @@ class LancamentoForm(forms.ModelForm):
 
 
 FormasFormSet = forms.modelformset_factory(
-    FormaPagamento, fields=["nome", "taxa_percentual", "ordem", "ativo"], extra=1,
+    FormaPagamento, fields=["nome", "taxa_percentual", "parcelavel", "ordem", "ativo"], extra=1,
     widgets={"taxa_percentual": forms.NumberInput(attrs={"step": "0.01", "min": "0"})},
 )

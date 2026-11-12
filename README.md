@@ -12,6 +12,8 @@ outra pasta, outro banco, outro serviço).
   procedimento, data, hora, duração e valor (duração e valor vêm do procedimento).
   Avisa se o horário bate com outro atendimento. Situações: agendado, confirmado,
   concluído, faltou, cancelado.
+- **Como vai pagar e como pagou**: ao agendar, escolha PIX, Dinheiro, Cartão de débito, Cartão de crédito à
+  vista ou parcelado (2x a 12x). Ao concluir, já vem marcado; se pagou de outro jeito, é só trocar.
 - **Concluir atendimento** faz tudo de uma vez:
   1. tira do estoque os materiais do procedimento (e guarda quanto custaram);
   2. lança a entrada no caixa com a taxa da forma de pagamento (ou gasta uma sessão do pacote);

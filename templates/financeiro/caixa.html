@@ -39,7 +39,7 @@
         <tr>
           <td>{{ l.data|date:"d/m" }}</td>
           <td><a href="{% if l.agendamento_id and l.categoria == 'atendimento' %}{% url 'agenda:detalhe' l.agendamento_id %}{% else %}{% url 'financeiro:editar' l.pk %}{% endif %}">{{ l.descricao }}</a><br><small>{{ l.get_categoria_display }}</small></td>
-          <td class="so-tela-grande">{{ l.forma|default:"—" }}{% if l.parcelas > 1 %} ({{ l.parcelas }}x){% endif %}{% if l.taxa %}<br><small>taxa {{ l.taxa|dinheiro }}</small>{% endif %}</td>
+          <td class="so-tela-grande">{{ l.forma|default:"—" }}{% if l.parcelas > 1 %} em {{ l.parcelas }}x{% endif %}{% if l.taxa %}<br><small>taxa {{ l.taxa|dinheiro }}</small>{% endif %}</td>
           <td class="num {% if l.tipo == 'entrada' %}positivo{% else %}negativo{% endif %}">{% if l.tipo == "saida" %}−{% endif %}{{ l.valor|dinheiro }}</td>
         </tr>
       {% empty %}

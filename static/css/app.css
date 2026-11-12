@@ -289,3 +289,15 @@ legend { font-weight: 800; padding: 0 6px; color: var(--primaria); }
 }
 .grid-caixa { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
 @media (max-width: 900px) { .grid-caixa { grid-template-columns: 1fr; } }
+
+/* Formas de pagamento em botões (PIX, Dinheiro, Cartão...) */
+.pagamento-campos { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 12px; }
+.campo.opcoes > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.campo.opcoes > div > div label { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border: 1px solid #ddd2d8;
+  border-radius: 10px; background: #fff; cursor: pointer; font-weight: 600; font-size: .92rem; }
+.campo.opcoes > div > div label:hover { border-color: var(--primaria); }
+.campo.opcoes input[type=radio] { accent-color: var(--primaria); width: 16px; height: 16px; margin: 0; }
+.campo.opcoes > div > div label:has(input:checked) { border-color: var(--primaria); background: var(--primaria-clara); color: var(--primaria);
+  box-shadow: 0 0 0 2px rgba(61, 35, 82, .12); }
+.pagamento-info { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 99px; background: var(--primaria-clara);
+  color: var(--primaria); font-weight: 700; font-size: .82rem; }

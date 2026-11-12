@@ -15,6 +15,13 @@
     {% include "_campo.html" with campo=form.pacote largo=True %}
     {% include "_campo.html" with campo=form.observacoes largo=True %}
   </div>
+  <fieldset style="margin-top:16px">
+    <legend>Como vai pagar</legend>
+    <div class="form-grid">
+      {% include "_pagamento.html" with forma=form.forma_prevista parcelas=form.parcelas_previstas parcelaveis=form.parcelaveis %}
+    </div>
+    <p class="suave" style="font-size:.82rem;margin:8px 0 0">Na hora de concluir, já vem marcado assim (dá para mudar). Sessão de pacote não precisa.</p>
+  </fieldset>
   <p class="suave" style="font-size:.82rem">Cliente nova? <a href="{% url 'clientes:nova' %}">Cadastre aqui</a> e depois agende. Ao escolher o procedimento, duração e valor se preenchem sozinhos.</p>
   <div class="botoes-form"><button class="btn" type="submit">Salvar</button></div>
 </form>

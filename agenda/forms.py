@@ -6,6 +6,7 @@ from django.utils import timezone
 from clientes.models import Cliente, Foto
 from core.campos import DATA, DINHEIRO, HORA, QUANTIDADE, VariasImagensField
 from estoque.models import Material
+from financeiro import pagamento
 from financeiro.models import FormaPagamento
 
 from .models import Agendamento, Pacote, Procedimento, ProcedimentoMaterial
@@ -57,13 +58,17 @@ class AgendamentoForm(forms.ModelForm):
 
     class Meta:
         model = Agendamento
-        fields = ["cliente", "procedimento", "valor", "pacote", "observacoes"]
+        fields = ["cliente", "procedimento", "valor", "pacote", "forma_prevista", "parcelas_previstas", "observacoes"]
         widgets = {"valor": DINHEIRO, "observacoes": forms.Textarea(attrs={"rows": 2})}
 
     def __init__(self, *args, financeiro=True, **kwargs):
         super().__init__(*args, **kwargs)
         if not financeiro:
             del self.fields["valor"]  # trancado: usa o preço do procedimento sem mostrar
+        pagamento.preparar(self, "forma_prevista", vazio="Ainda não sei")
+        self.fields["forma_prevista"].required = False
+        self.fields["forma_prevista"].label = "Forma de pagamento"
+        self.fields["parcelas_previstas"] = pagamento.campo_parcelas()
         self.fields["cliente"].queryset = Cliente.objects.filter(ativo=True)
         procs = Procedimento.objects.filter(ativo=True)
         if self.instance.pk:  # procedimento desativado continua aparecendo no agendamento antigo
@@ -89,6 +94,9 @@ class AgendamentoForm(forms.ModelForm):
             inicio = timezone.make_aware(datetime.combine(data, hora))
             self.instance.inicio = inicio
             self.instance.fim = inicio + timedelta(minutes=duracao)
+        pagamento.ajustar_parcelas(self, dados, "forma_prevista", "parcelas_previstas")
+        if dados.get("pacote"):
+            dados["forma_prevista"], dados["parcelas_previstas"] = None, 1  # pacote já pago
         proc = dados.get("procedimento")
         if "valor" not in self.fields and proc:
             mudou = not self.instance.pk or self.instance.procedimento_id != proc.pk
@@ -104,8 +112,8 @@ class ConcluirForm(forms.Form):
                                          empty_label="Não, pagamento normal")
     valor = forms.DecimalField(label="Valor recebido", max_digits=10, decimal_places=2, min_value=0, widget=DINHEIRO,
                                required=False)
-    forma = forms.ModelChoiceField(label="Forma de pagamento", queryset=FormaPagamento.objects.none(), required=False)
-    parcelas = forms.IntegerField(min_value=1, max_value=24, initial=1, required=False)
+    forma = forms.ModelChoiceField(label="Como pagou", queryset=FormaPagamento.objects.none(), required=False)
+    parcelas = pagamento.campo_parcelas()
     evolucao = forms.CharField(label="Evolução / como foi a sessão", widget=forms.Textarea(attrs={"rows": 3}),
                                required=False)
     medidas = forms.CharField(max_length=250, required=False, widget=forms.TextInput(attrs={"placeholder": "opcional"}))
@@ -116,7 +124,7 @@ class ConcluirForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.agendamento = agendamento
         if not financeiro:
-            del self.fields["valor"], self.fields["parcelas"]  # trancado: vale o valor combinado
+            del self.fields["valor"]  # trancado: vale o valor combinado (a forma de pagamento continua)
         pacotes = Pacote.com_saldo(agendamento.cliente, agendamento.procedimento)
         self.fields["usar_pacote"].queryset = Pacote.objects.filter(pk__in=[p.pk for p in pacotes])
         self.fields["usar_pacote"].label_from_instance = (
@@ -125,8 +133,11 @@ class ConcluirForm(forms.Form):
             self.initial["usar_pacote"] = agendamento.pacote_id
         elif len(pacotes) == 1:
             self.initial["usar_pacote"] = pacotes[0].pk
-        self.fields["forma"].queryset = formas_ativas()
+        pagamento.preparar(self)
         self.initial.setdefault("valor", agendamento.valor)
+        self.initial.setdefault("forma", agendamento.forma_prevista_id)  # já vem marcado como ia pagar
+        if agendamento.parcelas_previstas > 1:
+            self.initial.setdefault("parcelas", agendamento.parcelas_previstas)
 
     def clean(self):
         dados = super().clean()
@@ -135,14 +146,15 @@ class ConcluirForm(forms.Form):
             valor = self.agendamento.valor
         if not dados.get("usar_pacote") and valor > 0 and not dados.get("forma"):
             self.add_error("forma", "Escolha como a cliente pagou.")
+        pagamento.ajustar_parcelas(self, dados)
         return dados
 
 
 class PacoteForm(forms.ModelForm):
     valor_pago = forms.DecimalField(label="Pago agora", max_digits=10, decimal_places=2, min_value=0, required=False,
                                     widget=DINHEIRO, help_text="Deixe o valor total se pagou tudo; 0 se vai pagar depois.")
-    forma = forms.ModelChoiceField(label="Forma de pagamento", queryset=FormaPagamento.objects.none(), required=False)
-    parcelas = forms.IntegerField(min_value=1, max_value=24, initial=1, required=False)
+    forma = forms.ModelChoiceField(label="Como pagou", queryset=FormaPagamento.objects.none(), required=False)
+    parcelas = pagamento.campo_parcelas()
 
     class Meta:
         model = Pacote
@@ -153,7 +165,7 @@ class PacoteForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["cliente"].queryset = Cliente.objects.filter(ativo=True)
         self.fields["procedimento"].queryset = Procedimento.objects.filter(ativo=True)
-        self.fields["forma"].queryset = formas_ativas()
+        pagamento.preparar(self)
 
     def clean(self):
         dados = super().clean()
@@ -162,14 +174,20 @@ class PacoteForm(forms.ModelForm):
             self.add_error("valor_pago", "O valor pago não pode passar do valor do pacote.")
         if pago and pago > 0 and not dados.get("forma"):
             self.add_error("forma", "Escolha como a cliente pagou.")
+        pagamento.ajustar_parcelas(self, dados)
         return dados
 
 
 class ReceberForm(forms.Form):
     valor = forms.DecimalField(max_digits=10, decimal_places=2, min_value=0.01, widget=DINHEIRO)
-    forma = forms.ModelChoiceField(label="Forma de pagamento", queryset=FormaPagamento.objects.none())
-    parcelas = forms.IntegerField(min_value=1, max_value=24, initial=1)
+    forma = forms.ModelChoiceField(label="Como pagou", queryset=FormaPagamento.objects.none())
+    parcelas = pagamento.campo_parcelas()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["forma"].queryset = formas_ativas()
+        pagamento.preparar(self)
+
+    def clean(self):
+        dados = super().clean()
+        pagamento.ajustar_parcelas(self, dados)
+        return dados

@@ -24,7 +24,7 @@
       <li>
         <span class="hora">{{ a.inicio|time:"H:i" }}</span>
         <span class="bolinha" style="--cor:{{ a.procedimento.cor }}"></span>
-        <span class="cresce"><a href="{% url 'agenda:detalhe' a.pk %}">{{ a.cliente }}</a><br><small>{{ a.procedimento }} · até {{ a.fim|time:"H:i" }}</small></span>
+        <span class="cresce"><a href="{% url 'agenda:detalhe' a.pk %}">{{ a.cliente }}</a><br><small>{{ a.procedimento }} · até {{ a.fim|time:"H:i" }}{% if a.pacote_id %} · pacote{% elif a.forma_prevista %} · {{ a.pagamento_previsto }}{% endif %}</small></span>
         {% if a.em_aberto %}<a class="btn btn-ok btn-peq" href="{% url 'agenda:concluir' a.pk %}" title="Concluir"><svg class="ico"><use href="#i-check"/></svg></a>{% endif %}
         <span class="tag status-{{ a.status }}">{{ a.get_status_display }}</span>
       </li>
@@ -42,7 +42,7 @@
       <li>
         <span class="hora">{{ a.inicio|time:"H:i" }}</span>
         <span class="bolinha" style="--cor:{{ a.procedimento.cor }}"></span>
-        <span class="cresce"><a href="{% url 'agenda:detalhe' a.pk %}">{{ a.cliente }}</a><br><small>{{ a.procedimento }}</small></span>
+        <span class="cresce"><a href="{% url 'agenda:detalhe' a.pk %}">{{ a.cliente }}</a><br><small>{{ a.procedimento }}{% if a.pacote_id %} · pacote{% elif a.forma_prevista %} · {{ a.pagamento_previsto }}{% endif %}</small></span>
         {% if a.status == "confirmado" %}<span class="tag status-confirmado">Confirmado</span>{% elif a.cliente.telefone %}<a class="btn btn-whats btn-peq" href="{% url 'agenda:detalhe' a.pk %}#lembrete" title="Mandar lembrete"><svg class="ico"><use href="#i-whats"/></svg></a>{% endif %}
       </li>
     {% empty %}

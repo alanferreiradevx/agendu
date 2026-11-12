@@ -138,7 +138,7 @@ class AgendamentoTests(Base):
 class ConcluirTests(Base):
     def test_concluir_baixa_estoque_e_lanca_no_caixa_com_taxa(self):
         ag = self.marcar()
-        r = self.client.post(f"/agenda/{ag.pk}/concluir/", {"valor": "200", "forma": self.credito.pk, "parcelas": 1,
+        r = self.client.post(f"/agenda/{ag.pk}/concluir/", {"valor": "200", "forma": self.credito.pk, "parcelas": 2,
                                                              "evolucao": "Ótima resposta", "momento_fotos": "depois",
                                                              "fotos": [imagem()]})
         self.assertRedirects(r, f"/agenda/{ag.pk}/")
@@ -181,7 +181,7 @@ class PacoteTests(Base):
     def test_pacote_gasta_sessao_sem_lancar_de_novo_e_controla_saldo(self):
         r = self.client.post("/agenda/pacotes/novo/", {
             "cliente": self.cliente.pk, "procedimento": self.peeling.pk, "sessoes": 2, "valor": "300",
-            "data_compra": timezone.localdate(), "valor_pago": "100", "forma": self.pix.pk, "parcelas": 1})
+            "data_compra": timezone.localdate(), "valor_pago": "100", "forma": self.pix.pk, "parcelas": 2})
         pacote = Pacote.objects.get()
         self.assertRedirects(r, f"/agenda/pacotes/{pacote.pk}/")
         self.assertEqual((pacote.recebido, pacote.a_receber), (Decimal("100"), Decimal("200")))
@@ -197,7 +197,7 @@ class PacoteTests(Base):
         with self.assertRaises(Exception):
             servicos.concluir(ag, usar_pacote=pacote)
         # pagar o restante
-        self.client.post(f"/agenda/pacotes/{pacote.pk}/", {"valor": "200", "forma": self.pix.pk, "parcelas": 1})
+        self.client.post(f"/agenda/pacotes/{pacote.pk}/", {"valor": "200", "forma": self.pix.pk, "parcelas": 2})
         self.assertEqual(pacote.a_receber, 0)
 
     def test_nao_agenda_mais_sessoes_que_o_pacote_tem(self):

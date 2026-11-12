@@ -31,6 +31,10 @@ base técnica. Não misturar código, banco nem usuários dos dois.
   pacote e desfazer conclusão exigem a senha. Trancado, os formulários **removem** os campos de valor (agendamento usa o
   preço do procedimento; concluir usa o valor combinado; estoque entra sem custo e sem despesa). **Toda tela nova com
   dinheiro segue a mesma regra, com teste** (`FinanceiroTrancadoTests`). Esqueceu: `agendu-manage redefinir_senha_financeiro`.
+- **Como vai pagar / como pagou** (pedido do Alan): `Agendamento.forma_prevista` + `parcelas_previstas` (no agendamento) e o
+  `Lancamento.forma` + `parcelas` (na conclusão, já vem marcado com o previsto). Formas em botões e parcelas 2x-12x só se a
+  `FormaPagamento.parcelavel`: use `financeiro/pagamento.py` (`preparar`, `campo_parcelas`, `ajustar_parcelas`) e o
+  template `_pagamento.html` em todo formulário novo com forma de pagamento. A forma aparece mesmo com o financeiro trancado.
 - Painel: agendamentos primeiro (hoje e próximos 6 dias) e nenhum valor em dinheiro.
 - **Estoque só muda por `estoque.models.movimentar()`** (grava `Movimento` e atualiza a quantidade; compra com custo
   faz média ponderada). Pode ficar negativo (não trava o atendimento; o painel avisa).

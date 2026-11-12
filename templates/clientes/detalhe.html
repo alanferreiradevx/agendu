@@ -181,12 +181,13 @@
 {% elif aba == "agenda" %}
 <div class="card" style="padding:8px 14px">
   <div class="tabela-wrap"><table>
-    <thead><tr><th>Data</th><th>Procedimento</th><th>Situação</th><th class="num">Valor</th></tr></thead>
+    <thead><tr><th>Data</th><th>Procedimento</th><th>Situação</th><th class="so-tela-grande">Pagamento</th><th class="num">Valor</th></tr></thead>
     <tbody>
     {% for a in agendamentos %}
       <tr><td><a href="{% url 'agenda:detalhe' a.pk %}">{{ a.inicio|date:"d/m/Y H:i" }}</a></td><td>{{ a.procedimento }}{% if a.pacote %} <span class="tag tag-roxo">pacote</span>{% endif %}</td>
-        <td><span class="tag status-{{ a.status }}">{{ a.get_status_display }}</span></td><td class="num">{% if a.pacote %}—{% else %}{% valor a.valor %}{% endif %}</td></tr>
-    {% empty %}<tr><td colspan="4" class="vazio">Nenhum atendimento.</td></tr>{% endfor %}
+        <td><span class="tag status-{{ a.status }}">{{ a.get_status_display }}</span></td>
+        <td class="so-tela-grande">{% if a.status == "concluido" %}{{ a.pagamento_feito|default:"—" }}{% else %}{{ a.pagamento_previsto|default:"—" }}{% if a.pagamento_previsto %} <small>(previsto)</small>{% endif %}{% endif %}</td><td class="num">{% if a.pacote %}—{% else %}{% valor a.valor %}{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="5" class="vazio">Nenhum atendimento.</td></tr>{% endfor %}
     </tbody>
   </table></div>
 </div>
@@ -224,7 +225,7 @@
     <thead><tr><th>Data</th><th>Descrição</th><th>Forma</th><th class="num">Valor</th></tr></thead>
     <tbody>
     {% for l in lancamentos %}
-      <tr><td>{{ l.data|date:"d/m/Y" }}</td><td>{{ l.descricao }}</td><td>{{ l.forma|default:"—" }}{% if l.parcelas > 1 %} ({{ l.parcelas }}x){% endif %}</td><td class="num">{% valor l.valor %}</td></tr>
+      <tr><td>{{ l.data|date:"d/m/Y" }}</td><td>{{ l.descricao }}</td><td>{{ l.forma|default:"—" }}{% if l.parcelas > 1 %} em {{ l.parcelas }}x{% endif %}</td><td class="num">{% valor l.valor %}</td></tr>
     {% empty %}<tr><td colspan="4" class="vazio">Nenhum pagamento registrado.</td></tr>{% endfor %}
     </tbody>
   </table></div>

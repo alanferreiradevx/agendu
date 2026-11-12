@@ -6,7 +6,8 @@
 <form method="post" class="card" style="margin-top:14px;max-width:760px">{% csrf_token %}
   {% if form.non_field_errors %}<div class="erros-gerais">{{ form.non_field_errors|join:" " }}</div>{% endif %}
   <div class="form-grid">
-    {% for campo in form %}{% include "_campo.html" %}{% endfor %}
+    {% for campo in form %}{% if campo.name != "forma" and campo.name != "parcelas" %}{% include "_campo.html" %}{% endif %}{% endfor %}
+    {% include "_pagamento.html" with forma=form.forma parcelas=form.parcelas parcelaveis=form.parcelaveis %}
   </div>
   {% if tipo == "entrada" %}<p class="suave" style="font-size:.82rem">Atendimentos entram sozinhos ao concluir. Use aqui para venda de produto ou outra entrada avulsa.</p>{% endif %}
   <div class="botoes-form">

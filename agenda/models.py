@@ -8,6 +8,14 @@ from django.utils import timezone
 from core.utils import centavos
 
 
+def descrever_pagamento(forma, parcelas=1):
+    if not forma:
+        return ""
+    if forma.parcelavel and parcelas and parcelas > 1:
+        return f"{forma} em {parcelas}x"
+    return str(forma)
+
+
 class Procedimento(models.Model):
     CORES = [
         ("#8e5bb5", "Lilás"), ("#d9738b", "Rosa"), ("#e0a458", "Dourado"), ("#4f9d8f", "Verde-água"),
@@ -131,6 +139,9 @@ class Agendamento(models.Model):
                                 help_text="Preço combinado (vem do procedimento; mude se der desconto).")
     pacote = models.ForeignKey(Pacote, on_delete=models.SET_NULL, null=True, blank=True, related_name="agendamentos",
                                help_text="Se a sessão for de um pacote já pago.")
+    forma_prevista = models.ForeignKey("financeiro.FormaPagamento", on_delete=models.SET_NULL, null=True, blank=True,
+                                       related_name="+", verbose_name="como vai pagar")
+    parcelas_previstas = models.PositiveSmallIntegerField("parcelas", default=1)
     observacoes = models.TextField("observações", blank=True)
     custo_material = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
                                          help_text="Custo dos materiais no dia em que foi concluído.")
@@ -146,6 +157,21 @@ class Agendamento(models.Model):
     @property
     def em_aberto(self):
         return self.status in self.EM_ABERTO
+
+    @property
+    def pagamento_previsto(self):
+        """Ex.: "PIX" ou "Cartão de crédito parcelado em 3x"."""
+        return descrever_pagamento(self.forma_prevista, self.parcelas_previstas)
+
+    @property
+    def pagamento_feito(self):
+        """Como foi pago de verdade (do lançamento no caixa), ou "pacote"."""
+        if self.status != self.CONCLUIDO:
+            return ""
+        if self.pacote_id:
+            return "Sessão do pacote"
+        lanc = self.lancamentos.select_related("forma").first()
+        return descrever_pagamento(lanc.forma, lanc.parcelas) if lanc else ""
 
     @property
     def duracao_min(self):

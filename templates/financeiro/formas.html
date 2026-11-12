@@ -9,12 +9,13 @@
   {% if formas.non_form_errors %}<div class="erros-gerais">{{ formas.non_form_errors|join:" " }}</div>{% endif %}
   <div class="tabela-wrap">
     <table>
-      <thead><tr><th>Forma</th><th>Taxa (%)</th><th>Ordem</th><th>Ativa</th></tr></thead>
+      <thead><tr><th>Forma</th><th>Taxa (%)</th><th>Parcelado</th><th>Ordem</th><th>Ativa</th></tr></thead>
       <tbody>
       {% for f in formas %}
         <tr>{{ f.id }}
           <td>{{ f.nome }}{% for e in f.nome.errors %}<br><small class="negativo">{{ e }}</small>{% endfor %}</td>
           <td style="max-width:120px">{{ f.taxa_percentual }}</td>
+          <td>{{ f.parcelavel }}</td>
           <td style="max-width:90px">{{ f.ordem }}</td>
           <td>{{ f.ativo }}</td>
         </tr>

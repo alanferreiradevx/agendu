@@ -11,6 +11,8 @@ class FormaPagamento(models.Model):
     nome = models.CharField(max_length=60, unique=True)
     taxa_percentual = models.DecimalField("taxa (%)", max_digits=5, decimal_places=2, default=0,
                                           help_text="Taxa da maquininha/banco. Ex.: 3,49 para o crédito.")
+    parcelavel = models.BooleanField("parcelado", default=False,
+                                     help_text="Marcado: ao escolher esta forma, pergunta em quantas vezes (2x a 12x).")
     ativo = models.BooleanField(default=True)
     ordem = models.PositiveSmallIntegerField(default=0)
 

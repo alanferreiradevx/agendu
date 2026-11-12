@@ -16,8 +16,7 @@
   </div></fieldset>
   <fieldset><legend>Pagamento</legend><div class="form-grid">
     {% include "_campo.html" with campo=form.valor_pago %}
-    {% include "_campo.html" with campo=form.forma %}
-    {% include "_campo.html" with campo=form.parcelas %}
+    {% include "_pagamento.html" with forma=form.forma parcelas=form.parcelas parcelaveis=form.parcelaveis %}
   </div></fieldset>
   <p class="suave" style="font-size:.82rem">Pago agora em branco = pagou o valor total. O que ficar faltando aparece como "a receber" no pacote.</p>
   <button class="btn" type="submit">Salvar pacote</button>

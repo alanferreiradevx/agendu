@@ -74,3 +74,21 @@
     if (botao) botao.disabled = document.querySelectorAll("input[name='f']:checked").length !== 2;
   });
 })();
+
+/* Pagamento: mostra "Parcelado em" só quando a forma escolhida é parcelada */
+(function () {
+  "use strict";
+  function atualizar(bloco) {
+    var parcelaveis = (bloco.getAttribute("data-parcelaveis") || "").split(",");
+    var marcado = bloco.querySelector("input[type=radio]:checked");
+    var parcelas = bloco.querySelector("[data-so-parcelado]");
+    if (parcelas) parcelas.hidden = !(marcado && parcelaveis.indexOf(marcado.value) !== -1);
+  }
+  document.addEventListener("change", function (e) {
+    var bloco = e.target.closest && e.target.closest("[data-parcelaveis]");
+    if (bloco) atualizar(bloco);
+  });
+  document.addEventListener("DOMContentLoaded", function () {
+    Array.prototype.forEach.call(document.querySelectorAll("[data-parcelaveis]"), atualizar);
+  });
+})();

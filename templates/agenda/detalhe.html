@@ -44,6 +44,11 @@
       <h2>Detalhes</h2>
       <dl class="dl">
         <dt>Valor</dt><dd>{% if ag.pacote %}sessão do pacote ({% valor ag.pacote.valor_sessao %}){% else %}{% valor ag.valor %}{% endif %}</dd>
+        {% if ag.status == "concluido" %}
+          <dt>Como pagou</dt><dd>{% if ag.pagamento_feito %}<span class="pagamento-info">{{ ag.pagamento_feito }}</span>{% else %}—{% endif %}</dd>
+        {% elif not ag.pacote %}
+          <dt>Como vai pagar</dt><dd>{% if ag.pagamento_previsto %}<span class="pagamento-info">{{ ag.pagamento_previsto }}</span>{% else %}<span class="suave">não informado</span> · <a href="{% url 'agenda:editar' ag.pk %}">informar</a>{% endif %}</dd>
+        {% endif %}
         <dt>Duração</dt><dd>{{ ag.duracao_min }} min</dd>
         {% if ag.status == "concluido" %}
           <dt>Materiais</dt><dd>{% valor ag.custo_material %}</dd>
@@ -84,7 +89,7 @@
     {% if ag.status == "concluido" %}
     <div class="card">
       <h2><svg class="ico"><use href="#i-dinheiro"/></svg>Pagamento</h2>
-      <ul class="lista-limpa">{% for l in lancamentos %}<li><span class="cresce">{{ l.forma|default:"—" }}{% if l.parcelas > 1 %} ({{ l.parcelas }}x){% endif %}<br><small>taxa {% valor l.taxa %}</small></span><strong>{% valor l.valor %}</strong></li>{% empty %}<li class="suave">{% if ag.pacote %}Pago no pacote.{% else %}Sem pagamento registrado.{% endif %}</li>{% endfor %}</ul>
+      <ul class="lista-limpa">{% for l in lancamentos %}<li><span class="cresce">{{ l.forma|default:"—" }}{% if l.parcelas > 1 %} em {{ l.parcelas }}x{% endif %}<br><small>taxa {% valor l.taxa %}</small></span><strong>{% valor l.valor %}</strong></li>{% empty %}<li class="suave">{% if ag.pacote %}Pago no pacote.{% else %}Sem pagamento registrado.{% endif %}</li>{% endfor %}</ul>
       {% if not financeiro_liberado %}<p class="suave" style="font-size:.85rem;margin:8px 0 0"><svg class="ico"><use href="#i-cadeado"/></svg> Valores ocultos. <a href="{% url 'financeiro_entrar' %}?next={{ request.get_full_path|urlencode }}">Abrir o financeiro</a></p>{% endif %}
       <form method="post" action="{% url 'agenda:desfazer' ag.pk %}" style="margin-top:12px" onsubmit="return confirm('Desfazer a conclusão? Os materiais voltam ao estoque e a entrada sai do caixa.')">{% csrf_token %}
         <button class="btn btn-perigo btn-peq" type="submit">Desfazer conclusão</button>

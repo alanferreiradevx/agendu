@@ -1,0 +1,5 @@
+{# Formas de pagamento em botões; "Parcelado em" só aparece se a forma escolhida for parcelada. #}
+<div class="pagamento-campos" data-parcelaveis="{{ parcelaveis }}">
+  {% include "_campo.html" with campo=forma opcoes=True %}
+  {% if parcelas %}<div data-so-parcelado style="max-width:220px">{% include "_campo.html" with campo=parcelas %}</div>{% endif %}
+</div>
