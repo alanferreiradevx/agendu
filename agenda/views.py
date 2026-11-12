@@ -12,7 +12,7 @@ from core.models import Estudio
 from core.utils import formatar_mensagem
 
 from . import servicos
-from .forms import AgendamentoForm, ConcluirForm, MateriaisFormSet, PacoteForm, ProcedimentoForm, ReceberForm
+from .forms import AgendamentoForm, ConcluirForm, FormaPrevistaForm, MateriaisFormSet, PacoteForm, ProcedimentoForm, ReceberForm
 from .models import Agendamento, Pacote, Procedimento
 
 DIAS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
@@ -100,8 +100,25 @@ def detalhe(request, pk):
         "atencao": ficha.pontos_de_atencao() if ficha else [],
         "materiais": ag.procedimento.materiais.select_related("material"),
         "movimentos": ag.movimentos.select_related("material"),
+        "form_forma": FormaPrevistaForm(instance=ag) if ag.em_aberto and not ag.pacote_id else None,
         "lancamentos": ag.lancamentos.select_related("forma"),
     })
+
+
+@require_POST
+def forma_prevista(request, pk):
+    """Salva a forma de pagamento escolhida na página do atendimento."""
+    ag = get_object_or_404(Agendamento, pk=pk)
+    if not ag.em_aberto:
+        messages.error(request, "Este atendimento já foi fechado.")
+        return redirect("agenda:detalhe", pk)
+    form = FormaPrevistaForm(request.POST, instance=ag)
+    if form.is_valid():
+        form.save()
+        messages.success(request, f"Forma de pagamento: {ag.pagamento_previsto or 'ainda não sei'}.")
+    else:
+        messages.error(request, " ".join(e for erros in form.errors.values() for e in erros))
+    return redirect("agenda:detalhe", pk)
 
 
 @require_POST

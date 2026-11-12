@@ -16,7 +16,7 @@
       {% include "_pagamento.html" with forma=form.forma parcelas=form.parcelas parcelaveis=form.parcelaveis %}
       {% if form.valor %}{% include "_campo.html" with campo=form.valor %}{% endif %}
     </div>
-    {% if ag.forma_prevista %}<p class="suave" style="font-size:.82rem;margin:8px 0 0">Ao agendar: {{ ag.pagamento_previsto }}.</p>{% endif %}
+    {% if ag.forma_prevista %}<p class="suave" style="font-size:.82rem;margin:8px 0 0">Combinado ao agendar: {{ ag.pagamento_previsto }}.</p>{% endif %}
     {% if not form.valor %}<p class="suave" style="font-size:.85rem;margin:10px 0 0">Vale o valor combinado no agendamento.</p><p class="suave" style="font-size:.85rem;margin:8px 0 0"><svg class="ico"><use href="#i-cadeado"/></svg> Valores ocultos. <a href="{% url 'financeiro_entrar' %}?next={{ request.get_full_path|urlencode }}">Abrir o financeiro</a></p>{% endif %}
   </div>
 

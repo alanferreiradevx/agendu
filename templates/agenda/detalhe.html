@@ -45,9 +45,11 @@
       <dl class="dl">
         <dt>Valor</dt><dd>{% if ag.pacote %}sessão do pacote ({% valor ag.pacote.valor_sessao %}){% else %}{% valor ag.valor %}{% endif %}</dd>
         {% if ag.status == "concluido" %}
-          <dt>Como pagou</dt><dd>{% if ag.pagamento_feito %}<span class="pagamento-info">{{ ag.pagamento_feito }}</span>{% else %}—{% endif %}</dd>
-        {% elif not ag.pacote %}
-          <dt>Como vai pagar</dt><dd>{% if ag.pagamento_previsto %}<span class="pagamento-info">{{ ag.pagamento_previsto }}</span>{% else %}<span class="suave">não informado</span> · <a href="{% url 'agenda:editar' ag.pk %}">informar</a>{% endif %}</dd>
+          <dt>Forma de pagamento</dt><dd>{% if ag.pagamento_feito %}<span class="pagamento-info">{{ ag.pagamento_feito }}</span>{% else %}—{% endif %}</dd>
+        {% elif ag.pacote %}
+          <dt>Forma de pagamento</dt><dd>Sessão do pacote (já pago)</dd>
+        {% elif ag.pagamento_previsto %}
+          <dt>Forma de pagamento</dt><dd><span class="pagamento-info">{{ ag.pagamento_previsto }}</span></dd>
         {% endif %}
         <dt>Duração</dt><dd>{{ ag.duracao_min }} min</dd>
         {% if ag.status == "concluido" %}
@@ -57,6 +59,16 @@
         {% if ag.observacoes %}<dt>Observações</dt><dd style="white-space:pre-line">{{ ag.observacoes }}</dd>{% endif %}
       </dl>
     </div>
+
+    {% if form_forma %}
+    <form method="post" action="{% url 'agenda:forma_prevista' ag.pk %}" class="card">{% csrf_token %}
+      <h2><svg class="ico"><use href="#i-dinheiro"/></svg>Forma de pagamento</h2>
+      <div class="form-grid">
+        {% include "_pagamento.html" with forma=form_forma.forma_prevista parcelas=form_forma.parcelas_previstas parcelaveis=form_forma.parcelaveis %}
+      </div>
+      <div class="botoes-form"><button class="btn btn-sec" type="submit">Salvar forma de pagamento</button></div>
+    </form>
+    {% endif %}
 
     {% if ag.em_aberto %}
     <div class="card">

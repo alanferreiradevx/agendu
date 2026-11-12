@@ -20,7 +20,7 @@ class ComoPagaTests(Base):
 
     def test_formas_aparecem_como_botoes_com_parcelas(self):
         r = self.client.get("/agenda/novo/")
-        for texto in ("Como vai pagar", 'type="radio"', "PIX", "Dinheiro", "Cartão de débito",
+        for texto in ("Forma de pagamento", 'type="radio"', "PIX", "Dinheiro", "Cartão de débito",
                       "Cartão de crédito parcelado", "Ainda não sei", "12x", f'data-parcelaveis="{self.parcelado.pk}"'):
             self.assertContains(r, texto)
 
@@ -68,3 +68,17 @@ class ComoPagaTests(Base):
         pacote = Pacote.objects.create(cliente=self.cliente, procedimento=self.peeling, sessoes=2, valor=300)
         self.client.post("/agenda/novo/", {**self.dados, "pacote": pacote.pk, "forma_prevista": self.pix.pk})
         self.assertIsNone(Agendamento.objects.get().forma_prevista)
+
+    def test_escolher_a_forma_direto_no_atendimento(self):
+        ag = self.marcar(dias=1)
+        r = self.client.get(f"/agenda/{ag.pk}/")
+        self.assertContains(r, "Forma de pagamento")
+        self.assertContains(r, "Salvar forma de pagamento")
+        self.assertNotContains(r, "não informado")
+        self.client.post(f"/agenda/{ag.pk}/forma/", {"forma_prevista": self.parcelado.pk, "parcelas_previstas": 4})
+        ag.refresh_from_db()
+        self.assertEqual(ag.pagamento_previsto, "Cartão de crédito parcelado em 4x")
+        self.trancar()  # não é valor: dá para escolher com o financeiro trancado
+        self.client.post(f"/agenda/{ag.pk}/forma/", {"forma_prevista": self.pix.pk, "parcelas_previstas": 2})
+        ag.refresh_from_db()
+        self.assertEqual((ag.pagamento_previsto, ag.parcelas_previstas), ("PIX", 1))

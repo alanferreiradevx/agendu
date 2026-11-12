@@ -107,12 +107,34 @@ class AgendamentoForm(forms.ModelForm):
         return dados
 
 
+class FormaPrevistaForm(forms.ModelForm):
+    """Escolher a forma de pagamento direto na página do atendimento."""
+
+    class Meta:
+        model = Agendamento
+        fields = ["forma_prevista", "parcelas_previstas"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        pagamento.preparar(self, "forma_prevista", vazio="Ainda não sei")
+        self.fields["forma_prevista"].required = False
+        self.fields["forma_prevista"].label = ""  # o quadro já tem o título "Forma de pagamento"
+        self.fields["parcelas_previstas"] = pagamento.campo_parcelas()
+        if self.instance.parcelas_previstas > 1:
+            self.initial["parcelas_previstas"] = self.instance.parcelas_previstas
+
+    def clean(self):
+        dados = super().clean()
+        pagamento.ajustar_parcelas(self, dados, "forma_prevista", "parcelas_previstas")
+        return dados
+
+
 class ConcluirForm(forms.Form):
     usar_pacote = forms.ModelChoiceField(label="Usar sessão do pacote", queryset=Pacote.objects.none(), required=False,
                                          empty_label="Não, pagamento normal")
     valor = forms.DecimalField(label="Valor recebido", max_digits=10, decimal_places=2, min_value=0, widget=DINHEIRO,
                                required=False)
-    forma = forms.ModelChoiceField(label="Como pagou", queryset=FormaPagamento.objects.none(), required=False)
+    forma = forms.ModelChoiceField(label="Forma de pagamento", queryset=FormaPagamento.objects.none(), required=False)
     parcelas = pagamento.campo_parcelas()
     evolucao = forms.CharField(label="Evolução / como foi a sessão", widget=forms.Textarea(attrs={"rows": 3}),
                                required=False)
@@ -153,7 +175,7 @@ class ConcluirForm(forms.Form):
 class PacoteForm(forms.ModelForm):
     valor_pago = forms.DecimalField(label="Pago agora", max_digits=10, decimal_places=2, min_value=0, required=False,
                                     widget=DINHEIRO, help_text="Deixe o valor total se pagou tudo; 0 se vai pagar depois.")
-    forma = forms.ModelChoiceField(label="Como pagou", queryset=FormaPagamento.objects.none(), required=False)
+    forma = forms.ModelChoiceField(label="Forma de pagamento", queryset=FormaPagamento.objects.none(), required=False)
     parcelas = pagamento.campo_parcelas()
 
     class Meta:
@@ -180,7 +202,7 @@ class PacoteForm(forms.ModelForm):
 
 class ReceberForm(forms.Form):
     valor = forms.DecimalField(max_digits=10, decimal_places=2, min_value=0.01, widget=DINHEIRO)
-    forma = forms.ModelChoiceField(label="Como pagou", queryset=FormaPagamento.objects.none())
+    forma = forms.ModelChoiceField(label="Forma de pagamento", queryset=FormaPagamento.objects.none())
     parcelas = pagamento.campo_parcelas()
 
     def __init__(self, *args, **kwargs):
