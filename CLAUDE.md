@@ -54,7 +54,7 @@ Evolucao, Foto), `agenda` (Procedimento, ProcedimentoMaterial, Pacote, Agendamen
 `estoque` (Material, Movimento), `financeiro` (FormaPagamento com 5 formas criadas na migração 0002, Lancamento).
 
 ## Produção
-`https://agendu.ativix.co` na VPS Hostinger do Ativix (`root@187.41.119.140`). `/srv/agendu` (app, venv, dados/privado,
+**No ar desde 12/11/2026:** `https://agendu.ativix.co` (certificado Let's Encrypt registrado sem e-mail; renova sozinho) na VPS Hostinger do Ativix (`root@187.41.119.140`). `/srv/agendu` (app, venv, dados/privado,
 dados/staticfiles, dados/cache, backups), segredos `/etc/agendu/env`, serviço `agendu` (gunicorn **127.0.0.1:8002**;
 o Ativix usa 8001), site nginx `agendu`, atalhos `agendu-manage` (roda como usuário `agendu`) e `agendu-backup`
 (cron 3h30). Instalar: `.\deploy\enviar.ps1 -Servidor root@187.41.119.140 -Instalar -Dominio agendu.ativix.co -Email ...`;
