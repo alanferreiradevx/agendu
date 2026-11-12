@@ -17,6 +17,11 @@ class MaterialForm(forms.ModelForm):
             "observacoes": forms.Textarea(attrs={"rows": 2}),
         }
 
+    def __init__(self, *args, financeiro=True, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not financeiro:
+            del self.fields["custo_unitario"]
+
 
 class EntradaForm(forms.Form):
     """Compra: quanto chegou e quanto pagou no total. O custo por unidade é calculado."""
@@ -31,9 +36,12 @@ class EntradaForm(forms.Form):
     descricao = forms.CharField(label="Observação", max_length=150, required=False,
                                 widget=forms.TextInput(attrs={"placeholder": "fornecedor, nota..."}))
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, financeiro=True, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["forma"].queryset = FormaPagamento.objects.filter(ativo=True)
+        if not financeiro:  # trancado: registra só a quantidade (o custo médio não muda)
+            for campo in ("valor_total", "lancar_despesa", "forma"):
+                del self.fields[campo]
 
 
 class AjusteForm(forms.Form):

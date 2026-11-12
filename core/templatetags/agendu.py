@@ -42,3 +42,11 @@ def static_versao(caminho):
     except (OSError, TypeError):
         versao = 0
     return f"{static(caminho)}?v={versao}"
+
+
+@register.simple_tag(takes_context=True)
+def valor(context, quantia):
+    """{% valor x %}: R$ 1.234,50 com o financeiro aberto; R$ ••• com ele trancado."""
+    if context.get("financeiro_liberado"):
+        return brl(quantia)
+    return "R$ •••"

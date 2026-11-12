@@ -25,11 +25,12 @@
       <a class="nav-item{% ativo_se '/clientes/' %}" href="{% url 'clientes:lista' %}"><svg class="ico"><use href="#i-clientes"/></svg>Clientes</a>
       <a class="nav-item{% ativo_se '/agenda/pacotes' %}" href="{% url 'agenda:pacotes' %}"><svg class="ico"><use href="#i-pacote"/></svg>Pacotes</a>
       <div class="nav-secao">Gestão</div>
-      <a class="nav-item{% if rota == '/caixa/' or '/caixa/novo' in rota %} ativo{% endif %}" href="{% url 'financeiro:caixa' %}"><svg class="ico"><use href="#i-dinheiro"/></svg>Caixa</a>
-      <a class="nav-item{% ativo_se '/caixa/faturamento' %}" href="{% url 'financeiro:faturamento' %}"><svg class="ico"><use href="#i-grafico"/></svg>Faturamento</a>
       <a class="nav-item{% ativo_se '/estoque/' %}" href="{% url 'estoque:lista' %}"><svg class="ico"><use href="#i-caixa"/></svg>Estoque</a>
       <a class="nav-item{% ativo_se '/agenda/procedimentos' %}" href="{% url 'agenda:procedimentos' %}"><svg class="ico"><use href="#i-brilho"/></svg>Procedimentos</a>
       <a class="nav-item{% ativo_se '/configuracoes/' %}" href="{% url 'configuracoes' %}"><svg class="ico"><use href="#i-config"/></svg>Configurações</a>
+      <div class="nav-secao"><svg class="ico" style="width:12px;height:12px"><use href="#i-{% if financeiro_liberado %}aberto{% else %}cadeado{% endif %}"/></svg> Financeiro</div>
+      <a class="nav-item{% if rota == '/caixa/' or '/caixa/novo' in rota or '/caixa/formas' in rota or rota == '/financeiro/entrar/' %} ativo{% endif %}" href="{% url 'financeiro:caixa' %}"><svg class="ico"><use href="#i-dinheiro"/></svg>Caixa</a>
+      <a class="nav-item{% ativo_se '/caixa/faturamento' %}" href="{% url 'financeiro:faturamento' %}"><svg class="ico"><use href="#i-grafico"/></svg>Faturamento</a>
     </nav>
     <div class="lateral-rodape">Agendu · by <a href="https://ativix.co" target="_blank" rel="noopener">Ativix</a></div>
   </aside>
@@ -44,7 +45,13 @@
       </form>
       <div class="espaco so-tela-grande"></div>
       <a class="btn so-tela-grande" href="{% url 'agenda:novo' %}"><svg class="ico"><use href="#i-mais"/></svg>Agendar</a>
-      <a class="btn-icone so-tela-grande" href="{% url 'senha_trocar' %}" title="Trocar senha"><svg class="ico"><use href="#i-chave"/></svg></a>
+      {% if financeiro_liberado %}
+      <form method="post" action="{% url 'financeiro_trancar' %}" class="inline">{% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button class="btn btn-destaque btn-peq" type="submit" title="Os valores somem da tela"><svg class="ico"><use href="#i-aberto"/></svg><span class="so-tela-grande">Financeiro aberto ·&nbsp;</span>Trancar</button>
+      </form>
+      {% endif %}
+      <a class="btn-icone so-tela-grande" href="{% url 'senha_trocar' %}" title="Trocar senha de login"><svg class="ico"><use href="#i-chave"/></svg></a>
       <form method="post" action="{% url 'logout' %}" class="inline">{% csrf_token %}
         <button class="btn-icone" type="submit" title="Sair" aria-label="Sair"><svg class="ico"><use href="#i-sair"/></svg></button>
       </form>
@@ -61,7 +68,7 @@
   <a href="{% url 'agenda:semana' %}"{% if rota == '/agenda/' %} class="ativo"{% endif %}><svg class="ico"><use href="#i-agenda"/></svg>Agenda</a>
   <a class="mais" href="{% url 'agenda:novo' %}" aria-label="Agendar"><span class="bola"><svg class="ico"><use href="#i-mais"/></svg></span></a>
   <a href="{% url 'clientes:lista' %}"{% if '/clientes/' in rota %} class="ativo"{% endif %}><svg class="ico"><use href="#i-clientes"/></svg>Clientes</a>
-  <a href="{% url 'financeiro:caixa' %}"{% if rota == '/caixa/' %} class="ativo"{% endif %}><svg class="ico"><use href="#i-dinheiro"/></svg>Caixa</a>
+  <a href="{% url 'financeiro:caixa' %}"{% if rota == '/caixa/' %} class="ativo"{% endif %}><svg class="ico"><use href="#i-{% if financeiro_liberado %}dinheiro{% else %}cadeado{% endif %}"/></svg>Caixa</a>
 </nav>
 {% endwith %}
 {% endblock %}

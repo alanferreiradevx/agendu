@@ -13,8 +13,8 @@
 <div class="grid grid-4" style="margin-bottom:18px">
   <div class="card kpi"><div class="rotulo">Sessões feitas</div><div class="valor">{{ p.usadas }} <small>de {{ p.sessoes }}</small></div></div>
   <div class="card kpi"><div class="rotulo">Restantes</div><div class="valor">{{ p.restantes }}</div></div>
-  <div class="card kpi"><div class="rotulo">Valor</div><div class="valor">{{ p.valor|dinheiro }}</div><small>{{ p.valor_sessao|dinheiro }} por sessão</small></div>
-  <div class="card kpi"><div class="rotulo">A receber</div><div class="valor {% if p.a_receber %}negativo{% endif %}">{{ p.a_receber|dinheiro }}</div></div>
+  <div class="card kpi"><div class="rotulo">Valor</div><div class="valor">{% valor p.valor %}</div><small>{% valor p.valor_sessao %} por sessão</small></div>
+  <div class="card kpi"><div class="rotulo">A receber</div><div class="valor {% if p.a_receber %}negativo{% endif %}">{% valor p.a_receber %}</div></div>
 </div>
 
 <div class="grid grid-2">
@@ -30,11 +30,11 @@
     <div class="card">
       <h2>Pagamentos</h2>
       <ul class="lista-limpa">
-      {% for l in lancamentos %}<li><span class="cresce">{{ l.data|date:"d/m/Y" }} · {{ l.forma|default:"—" }}{% if l.parcelas > 1 %} ({{ l.parcelas }}x){% endif %}</span><strong>{{ l.valor|dinheiro }}</strong></li>
+      {% for l in lancamentos %}<li><span class="cresce">{{ l.data|date:"d/m/Y" }} · {{ l.forma|default:"—" }}{% if l.parcelas > 1 %} ({{ l.parcelas }}x){% endif %}</span><strong>{% valor l.valor %}</strong></li>
       {% empty %}<li class="suave">Nenhum pagamento registrado.</li>{% endfor %}
       </ul>
     </div>
-    {% if p.a_receber %}
+    {% if p.a_receber and financeiro_liberado %}
     <form method="post" class="card">{% csrf_token %}
       <h2>Registrar pagamento</h2>
       <div class="form-grid">

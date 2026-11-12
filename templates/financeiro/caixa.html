@@ -14,6 +14,7 @@
     <a class="btn btn-ok" href="{% url 'financeiro:novo' 'entrada' %}"><svg class="ico"><use href="#i-mais"/></svg>Entrada</a>
     <a class="btn btn-perigo" href="{% url 'financeiro:novo' 'saida' %}"><svg class="ico"><use href="#i-mais"/></svg>Despesa</a>
     <a class="btn btn-sec" href="?mes={{ mes_codigo }}&csv=1{% if tipo %}&tipo={{ tipo }}{% endif %}">Excel</a>
+    <a class="btn btn-sec" href="{% url 'financeiro:formas' %}">Taxas</a>
   </div>
 </div>
 

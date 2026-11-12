@@ -10,8 +10,9 @@ from django.views.decorators.http import require_POST
 from django.utils import timezone
 
 from agenda.models import Agendamento
+from core.financeiro import financeiro_obrigatorio
 
-from .forms import LancamentoForm
+from .forms import FormasFormSet, LancamentoForm
 from .models import Lancamento, resumo
 
 MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro",
@@ -36,6 +37,7 @@ def _navegacao(inicio, proximo):
             "mes_anterior": f"{anterior:%Y-%m}", "mes_proximo": f"{proximo:%Y-%m}"}
 
 
+@financeiro_obrigatorio
 def caixa(request):
     inicio, proximo = _mes(request)
     qs = Lancamento.objects.filter(data__gte=inicio, data__lt=proximo).select_related("forma", "cliente")
@@ -66,6 +68,7 @@ def _csv(qs, inicio):
     return resposta
 
 
+@financeiro_obrigatorio
 def lancamento(request, tipo, pk=None):
     lanc = get_object_or_404(Lancamento, pk=pk) if pk else None
     if lanc:
@@ -82,6 +85,7 @@ def lancamento(request, tipo, pk=None):
 
 
 @require_POST
+@financeiro_obrigatorio
 def apagar(request, pk):
     lanc = get_object_or_404(Lancamento, pk=pk)
     if lanc.agendamento_id and lanc.categoria == "atendimento":
@@ -93,6 +97,7 @@ def apagar(request, pk):
     return redirect(f"/caixa/?mes={mes}")
 
 
+@financeiro_obrigatorio
 def faturamento(request):
     """Quanto cada procedimento rendeu no mês, quanto gastou de material e o que sobrou."""
     inicio, proximo = _mes(request)
@@ -147,3 +152,14 @@ def faturamento(request):
                                              inicio__date__lt=proximo).count(),
         **_navegacao(inicio, proximo),
     })
+
+
+@financeiro_obrigatorio
+def formas(request):
+    """Formas de pagamento e a taxa de cada uma (maquininha, banco)."""
+    conjunto = FormasFormSet(request.POST or None, prefix="formas")
+    if request.method == "POST" and conjunto.is_valid():
+        conjunto.save()
+        messages.success(request, "Formas de pagamento salvas.")
+        return redirect("financeiro:formas")
+    return render(request, "financeiro/formas.html", {"formas": conjunto})

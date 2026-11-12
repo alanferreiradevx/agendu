@@ -25,6 +25,11 @@ class ProcedimentoForm(forms.ModelForm):
             "cuidados_pos": forms.Textarea(attrs={"rows": 3}),
         }
 
+    def __init__(self, *args, financeiro=True, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not financeiro:
+            del self.fields["preco"]  # trancado: o preço continua o que estava
+
 
 class ProcedimentoMaterialForm(forms.ModelForm):
     class Meta:
@@ -55,8 +60,10 @@ class AgendamentoForm(forms.ModelForm):
         fields = ["cliente", "procedimento", "valor", "pacote", "observacoes"]
         widgets = {"valor": DINHEIRO, "observacoes": forms.Textarea(attrs={"rows": 2})}
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, financeiro=True, **kwargs):
         super().__init__(*args, **kwargs)
+        if not financeiro:
+            del self.fields["valor"]  # trancado: usa o preço do procedimento sem mostrar
         self.fields["cliente"].queryset = Cliente.objects.filter(ativo=True)
         procs = Procedimento.objects.filter(ativo=True)
         if self.instance.pk:  # procedimento desativado continua aparecendo no agendamento antigo
@@ -82,6 +89,13 @@ class AgendamentoForm(forms.ModelForm):
             inicio = timezone.make_aware(datetime.combine(data, hora))
             self.instance.inicio = inicio
             self.instance.fim = inicio + timedelta(minutes=duracao)
+        proc = dados.get("procedimento")
+        if "valor" not in self.fields and proc:
+            mudou = not self.instance.pk or self.instance.procedimento_id != proc.pk
+            if dados.get("pacote"):
+                self.instance.valor = 0
+            elif mudou or self.instance.pacote_id:
+                self.instance.valor = proc.preco
         return dados
 
 
@@ -98,9 +112,11 @@ class ConcluirForm(forms.Form):
     fotos = VariasImagensField(label="Fotos da sessão (opcional)")
     momento_fotos = forms.ChoiceField(label="As fotos são", choices=Foto.MOMENTO, initial="depois")
 
-    def __init__(self, *args, agendamento, **kwargs):
+    def __init__(self, *args, agendamento, financeiro=True, **kwargs):
         super().__init__(*args, **kwargs)
         self.agendamento = agendamento
+        if not financeiro:
+            del self.fields["valor"], self.fields["parcelas"]  # trancado: vale o valor combinado
         pacotes = Pacote.com_saldo(agendamento.cliente, agendamento.procedimento)
         self.fields["usar_pacote"].queryset = Pacote.objects.filter(pk__in=[p.pk for p in pacotes])
         self.fields["usar_pacote"].label_from_instance = (
@@ -114,7 +130,10 @@ class ConcluirForm(forms.Form):
 
     def clean(self):
         dados = super().clean()
-        if not dados.get("usar_pacote") and (dados.get("valor") or 0) > 0 and not dados.get("forma"):
+        valor = dados.get("valor") if "valor" in self.fields else self.agendamento.valor
+        if valor is None:
+            valor = self.agendamento.valor
+        if not dados.get("usar_pacote") and valor > 0 and not dados.get("forma"):
             self.add_error("forma", "Escolha como a cliente pagou.")
         return dados
 

@@ -9,7 +9,7 @@
     {% include "_campo.html" with campo=form.nome %}
     {% include "_campo.html" with campo=form.unidade %}
     {% include "_campo.html" with campo=form.estoque_minimo %}
-    {% if material %}{% include "_campo.html" with campo=form.custo_unitario %}{% include "_campo.html" with campo=form.validade %}{% endif %}
+    {% if material %}{% if form.custo_unitario %}{% include "_campo.html" with campo=form.custo_unitario %}{% endif %}{% include "_campo.html" with campo=form.validade %}{% endif %}
     {% include "_campo.html" with campo=form.fornecedor %}
     {% include "_campo.html" with campo=form.ativo %}
     {% include "_campo.html" with campo=form.observacoes largo=True %}
@@ -17,11 +17,11 @@
   {% if entrada %}
   <fieldset><legend>Quanto você tem agora (opcional)</legend><div class="form-grid">
     {% include "_campo.html" with campo=entrada.quantidade %}
-    {% include "_campo.html" with campo=entrada.valor_total %}
+    {% if entrada.valor_total %}{% include "_campo.html" with campo=entrada.valor_total %}{% endif %}
     {% include "_campo.html" with campo=entrada.validade %}
-    {% include "_campo.html" with campo=entrada.lancar_despesa %}
-    {% include "_campo.html" with campo=entrada.forma %}
+    {% if entrada.lancar_despesa %}{% include "_campo.html" with campo=entrada.lancar_despesa %}{% include "_campo.html" with campo=entrada.forma %}{% endif %}
   </div>
+  {% if not entrada.valor_total %}<p class="suave" style="font-size:.85rem;margin:8px 0 0"><svg class="ico"><use href="#i-cadeado"/></svg> Custo e despesa só com o financeiro aberto. <a href="{% url 'financeiro_entrar' %}?next={{ request.get_full_path|urlencode }}">Abrir o financeiro</a></p>{% endif %}
   <p class="suave" style="font-size:.82rem;margin-bottom:0">Ex.: frasco de 30 ml por R$ 90 → quantidade 30 (unidade ml), valor 90. O custo por ml (R$ 3) é calculado sozinho. Desmarque "lançar como despesa" se a compra foi antes de começar a usar o Agendu.</p>
   </fieldset>
   {% endif %}

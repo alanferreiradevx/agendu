@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block titulo %}Financeiro{% endblock %}
+{% block conteudo %}
+<div class="card" style="max-width:440px;margin:30px auto">
+  <div style="text-align:center;margin-bottom:14px">
+    <span class="avatar grande" style="margin:0 auto 10px"><svg class="ico" style="width:28px;height:28px"><use href="#i-cadeado"/></svg></span>
+    <h1>{% if criar %}Criar senha do financeiro{% else %}Financeiro trancado{% endif %}</h1>
+    <p class="suave" style="margin:0">
+      {% if criar %}Caixa, faturamento, preços, custos e valores de pacotes só aparecem com esta senha. Ela é diferente da senha de login.
+      {% else %}Digite a senha do financeiro para ver os valores. Tranca sozinho depois de {{ minutos }} minutos sem usar.{% endif %}
+    </p>
+  </div>
+  {% if bloqueado %}
+    <div class="erros-gerais">Muitas tentativas erradas. Espere 15 minutos e tente de novo.</div>
+  {% else %}
+  <form method="post">{% csrf_token %}
+    <input type="hidden" name="next" value="{{ destino }}">
+    {% for campo in form %}{% include "_campo.html" %}<div style="height:10px"></div>{% endfor %}
+    <button class="btn" type="submit" style="width:100%;justify-content:center"><svg class="ico"><use href="#i-cadeado"/></svg>{% if criar %}Criar e abrir{% else %}Abrir financeiro{% endif %}</button>
+  </form>
+  {% endif %}
+  <p class="suave" style="font-size:.8rem;text-align:center;margin:14px 0 0">Esqueceu? Peça para rodar no servidor: <span class="mono">agendu-manage redefinir_senha_financeiro</span></p>
+</div>
+{% endblock %}

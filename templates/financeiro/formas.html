@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block titulo %}Formas de pagamento{% endblock %}
+{% block conteudo %}
+<p style="margin:0 0 8px"><a href="{% url 'financeiro:caixa' %}">← Caixa</a></p>
+<h1>Formas de pagamento e taxas</h1>
+<p class="suave">A taxa é descontada das entradas para mostrar o que sobra de verdade. Coloque as taxas da sua maquininha.</p>
+<form method="post" class="card" style="max-width:760px">{% csrf_token %}
+  {{ formas.management_form }}
+  {% if formas.non_form_errors %}<div class="erros-gerais">{{ formas.non_form_errors|join:" " }}</div>{% endif %}
+  <div class="tabela-wrap">
+    <table>
+      <thead><tr><th>Forma</th><th>Taxa (%)</th><th>Ordem</th><th>Ativa</th></tr></thead>
+      <tbody>
+      {% for f in formas %}
+        <tr>{{ f.id }}
+          <td>{{ f.nome }}{% for e in f.nome.errors %}<br><small class="negativo">{{ e }}</small>{% endfor %}</td>
+          <td style="max-width:120px">{{ f.taxa_percentual }}</td>
+          <td style="max-width:90px">{{ f.ordem }}</td>
+          <td>{{ f.ativo }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="botoes-form"><button class="btn" type="submit">Salvar</button></div>
+</form>
+{% endblock %}

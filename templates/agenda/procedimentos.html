@@ -16,9 +16,9 @@
           <br><small>{% for m in p.materiais.all %}{{ m.material }} {{ m.quantidade|numero }} {{ m.material.unidade }}{% if not forloop.last %} · {% endif %}{% empty %}sem materiais{% endfor %}</small></td>
         <td>{{ p.duracao_min }} min</td>
         <td>{% if p.retorno_dias %}{{ p.retorno_dias }} dias{% else %}—{% endif %}</td>
-        <td class="num">{{ p.preco|dinheiro }}</td>
-        <td class="num">{{ custo|dinheiro }}</td>
-        <td class="num"><strong>{{ p.margem|dinheiro }}</strong></td>
+        <td class="num">{% valor p.preco %}</td>
+        <td class="num">{% valor custo %}</td>
+        <td class="num"><strong>{% valor p.margem %}</strong></td>
       </tr>
       {% endwith %}
     {% empty %}

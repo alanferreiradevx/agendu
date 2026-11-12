@@ -15,7 +15,7 @@
         <td><a href="{% url 'agenda:pacote' p.pk %}">{{ p.sessoes }}x {{ p.procedimento }}</a>{% if p.validade %}<br><small>vale até {{ p.validade|date:"d/m/Y" }}</small>{% endif %}</td>
         <td style="min-width:150px">{{ p.usadas }} de {{ p.sessoes }} · <strong>{{ p.restantes }} restante(s)</strong>
           <div class="barra" style="margin-top:4px"><div style="width:{% widthratio p.usadas p.sessoes 100 %}%"></div></div></td>
-        <td class="num">{% if p.a_receber %}<span class="negativo">{{ p.a_receber|dinheiro }}</span>{% else %}<span class="tag tag-ok">pago</span>{% endif %}</td></tr>
+        <td class="num">{% if p.a_receber %}<span class="negativo">{% valor p.a_receber %}</span>{% else %}<span class="tag tag-ok">pago</span>{% endif %}</td></tr>
     {% empty %}<tr><td colspan="4" class="vazio">Nenhum pacote em andamento.</td></tr>{% endfor %}
     </tbody>
   </table></div>

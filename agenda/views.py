@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from core.financeiro import financeiro_obrigatorio, liberado, url_desbloquear
 from core.models import Estudio
 from core.utils import formatar_mensagem
 
@@ -66,7 +67,8 @@ def editar(request, pk=None):
             if pac:
                 inicial.update(pacote=pac.pk, cliente=pac.cliente_id, procedimento=pac.procedimento_id,
                                duracao=pac.procedimento.duracao_min, valor=0)
-    form = AgendamentoForm(request.POST or None, instance=ag if pk else None, initial=inicial)
+    form = AgendamentoForm(request.POST or None, instance=ag if pk else None, initial=inicial,
+                           financeiro=liberado(request))
     if request.method == "POST" and form.is_valid():
         ag = form.save()
         messages.success(request, f"Agendado: {ag.cliente} em {timezone.localtime(ag.inicio):%d/%m às %H:%M}.")
@@ -123,11 +125,11 @@ def concluir(request, pk):
     if not ag.em_aberto and ag.status != Agendamento.FALTOU:
         messages.error(request, "Este atendimento não pode ser concluído.")
         return redirect("agenda:detalhe", pk)
-    form = ConcluirForm(request.POST or None, request.FILES or None, agendamento=ag)
+    form = ConcluirForm(request.POST or None, request.FILES or None, agendamento=ag, financeiro=liberado(request))
     if request.method == "POST" and form.is_valid():
         d = form.cleaned_data
         try:
-            servicos.concluir(ag, forma=d["forma"], valor=d["valor"] or 0, parcelas=d["parcelas"] or 1,
+            servicos.concluir(ag, forma=d["forma"], valor=d.get("valor"), parcelas=d.get("parcelas") or 1,
                               usar_pacote=d["usar_pacote"], evolucao=d["evolucao"], medidas=d["medidas"],
                               fotos=d["fotos"], momento_fotos=d["momento_fotos"])
         except ValidationError as e:
@@ -140,6 +142,7 @@ def concluir(request, pk):
 
 
 @require_POST
+@financeiro_obrigatorio
 def desfazer(request, pk):
     ag = get_object_or_404(Agendamento, pk=pk)
     try:
@@ -171,7 +174,7 @@ def procedimentos(request):
 
 def procedimento_editar(request, pk=None):
     proc = get_object_or_404(Procedimento, pk=pk) if pk else Procedimento()
-    form = ProcedimentoForm(request.POST or None, instance=proc)
+    form = ProcedimentoForm(request.POST or None, instance=proc, financeiro=liberado(request))
     materiais = MateriaisFormSet(request.POST or None, instance=proc, prefix="mat")
     if request.method == "POST" and form.is_valid() and materiais.is_valid():
         with transaction.atomic():
@@ -192,6 +195,7 @@ def pacotes(request):
     return render(request, "agenda/pacotes.html", {"ativos": ativos, "encerrados": encerrados[:50]})
 
 
+@financeiro_obrigatorio
 def pacote_novo(request):
     inicial = {}
     if request.GET.get("cliente"):
@@ -209,6 +213,8 @@ def pacote_novo(request):
 
 def pacote(request, pk):
     p = get_object_or_404(Pacote.objects.select_related("cliente", "procedimento"), pk=pk)
+    if request.method == "POST" and not liberado(request):
+        return redirect(url_desbloquear(request))
     form = ReceberForm(request.POST or None, initial={"valor": p.a_receber})
     if request.method == "POST" and form.is_valid():
         d = form.cleaned_data

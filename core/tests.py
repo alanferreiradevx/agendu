@@ -15,6 +15,7 @@ from agenda import servicos
 from agenda.consultas import retornos
 from agenda.models import Agendamento, Pacote, Procedimento, ProcedimentoMaterial
 from clientes.models import Cliente, Foto
+from core.models import Estudio
 from core.utils import brl, whatsapp_url
 from estoque.models import Material, movimentar
 from financeiro.models import FormaPagamento, Lancamento, resumo
@@ -41,6 +42,8 @@ class Base(TestCase):
         cache.clear()
         self.user = get_user_model().objects.create_user("ana", password="senha-forte-123")
         self.client.force_login(self.user)
+        Estudio.atual().definir_senha_financeiro("4321")
+        self.abrir_financeiro()
         self.cliente = Cliente.objects.create(nome="Maria Silva", telefone="(11) 98765-4321")
         self.luva = Material.objects.create(nome="Luva", unidade="par")
         movimentar(self.luva, 10, "entrada", custo_unitario=Decimal("0.50"))
@@ -51,6 +54,12 @@ class Base(TestCase):
         ProcedimentoMaterial.objects.create(procedimento=self.peeling, material=self.acido, quantidade=3)
         self.pix = FormaPagamento.objects.get(nome="PIX")
         self.credito = FormaPagamento.objects.get(nome="Cartão de crédito à vista")
+
+    def abrir_financeiro(self):
+        self.client.post("/financeiro/entrar/", {"senha": "4321"})
+
+    def trancar(self):
+        self.client.post("/financeiro/trancar/")
 
     def marcar(self, dias=0, hora=10, **extra):
         inicio = timezone.make_aware(datetime.combine(timezone.localdate() + timedelta(days=dias), time(hora)))
@@ -90,7 +99,7 @@ class PaginasTests(Base):
             "/estoque/", "/estoque/?filtro=alerta", "/estoque/novo/", f"/estoque/{self.luva.pk}/",
             f"/estoque/{self.luva.pk}/editar/",
             "/caixa/", "/caixa/?tipo=saida", "/caixa/faturamento/", "/caixa/novo/entrada/", "/caixa/novo/saida/",
-            "/configuracoes/", "/senha/",
+            "/configuracoes/", "/senha/", "/caixa/formas/", "/financeiro/senha/",
         ] + [f"/clientes/{self.cliente.pk}/?aba={a}" for a in
              ("resumo", "ficha", "evolucao", "fotos", "agenda", "pacotes", "financeiro")]
         for url in urls:
@@ -272,6 +281,89 @@ class PainelTests(Base):
         self.cliente.save()
         self.assertContains(self.client.get("/"), "Aniversariantes")
         self.assertContains(self.client.get("/"), "Maria Silva")
+
+
+class FinanceiroTrancadoTests(Base):
+    """Valores só aparecem com a senha do financeiro (diferente da senha de login)."""
+
+    def setUp(self):
+        super().setUp()
+        self.ag = self.marcar(dias=1)
+        servicos.concluir(self.marcar(dias=-2), forma=self.pix)
+        self.pacote = servicos.vender_pacote(Pacote(cliente=self.cliente, procedimento=self.peeling, sessoes=3,
+                                                    valor=Decimal("540")), forma=self.pix, valor_pago=Decimal("100"))
+        self.trancar()
+
+    def test_paginas_de_valores_pedem_a_senha(self):
+        for url in ["/caixa/", "/caixa/faturamento/", "/caixa/formas/", "/caixa/novo/saida/", "/agenda/pacotes/novo/",
+                    "/caixa/?csv=1", "/admin/", "/financeiro/senha/"]:
+            with self.subTest(url=url):
+                r = self.client.get(url)
+                self.assertEqual(r.status_code, 302)
+                self.assertTrue(r["Location"].startswith("/financeiro/entrar/"), r["Location"])
+
+    def test_nenhum_valor_aparece_nas_outras_telas(self):
+        urls = ["/", "/agenda/", f"/agenda/{self.ag.pk}/", f"/agenda/{self.ag.pk}/concluir/", "/agenda/procedimentos/",
+                f"/agenda/procedimentos/{self.peeling.pk}/", "/agenda/pacotes/", f"/agenda/pacotes/{self.pacote.pk}/",
+                "/estoque/", f"/estoque/{self.acido.pk}/", "/estoque/novo/", f"/agenda/{self.ag.pk}/editar/",
+                f"/clientes/{self.cliente.pk}/?aba=financeiro", f"/clientes/{self.cliente.pk}/?aba=pacotes",
+                f"/clientes/{self.cliente.pk}/?aba=agenda", f"/clientes/{self.cliente.pk}/"]
+        for url in urls:
+            with self.subTest(url=url):
+                html = self.client.get(url).content.decode()
+                for proibido in ("R$ 200", "200,00", "540", "R$ 4,00", 'name="valor"', 'name="preco"',
+                                 'name="custo_unitario"', 'name="entrada-valor_total"'):
+                    self.assertNotIn(proibido, html)
+
+    def test_senha_errada_bloqueia_e_certa_libera(self):
+        r = self.client.post("/financeiro/entrar/", {"senha": "0000", "next": "/caixa/"})
+        self.assertContains(r, "Senha incorreta")
+        for _ in range(5):
+            self.client.post("/financeiro/entrar/", {"senha": "0000"})
+        r = self.client.post("/financeiro/entrar/", {"senha": "4321"})
+        self.assertContains(r, "Muitas tentativas")
+        cache.clear()
+        r = self.client.post("/financeiro/entrar/", {"senha": "4321", "next": "/caixa/"})
+        self.assertRedirects(r, "/caixa/")
+        self.assertContains(self.client.get(f"/agenda/pacotes/{self.pacote.pk}/"), "R$ 540,00")
+        self.assertContains(self.client.get("/"), "Trancar")
+
+    def test_tranca_sozinho_depois_do_prazo(self):
+        self.abrir_financeiro()
+        sessao = self.client.session
+        sessao["financeiro_ate"] = 1  # venceu
+        sessao.save()
+        self.assertEqual(self.client.get("/caixa/").status_code, 302)
+
+    def test_trancado_ainda_agenda_e_conclui_com_o_preco_do_procedimento(self):
+        dados = {"cliente": self.cliente.pk, "procedimento": self.peeling.pk, "data": timezone.localdate() + timedelta(days=3),
+                 "hora": "09:00", "duracao": 60, "valor": "1"}  # valor mandado à força é ignorado
+        self.client.post("/agenda/novo/", dados)
+        novo = Agendamento.objects.get(inicio__date=timezone.localdate() + timedelta(days=3))
+        self.assertEqual(novo.valor, Decimal("200"))
+        r = self.client.post(f"/agenda/{novo.pk}/concluir/", {"forma": self.credito.pk, "valor": "1",
+                                                               "momento_fotos": "depois"})
+        self.assertRedirects(r, f"/agenda/{novo.pk}/")
+        self.assertEqual(Lancamento.objects.get(agendamento=novo).valor, Decimal("200"))
+        # desfazer mexe no caixa: pede a senha
+        r = self.client.post(f"/agenda/{novo.pk}/desfazer/")
+        self.assertTrue(r["Location"].startswith("/financeiro/entrar/"))
+
+    def test_trancado_entrada_de_estoque_sem_custo_e_sem_despesa(self):
+        self.client.post(f"/estoque/{self.acido.pk}/", {"entrada-quantidade": "10", "entrada-valor_total": "999",
+                                                        "entrada-lancar_despesa": "on"})
+        self.acido.refresh_from_db()
+        self.assertEqual((self.acido.quantidade, self.acido.custo_unitario), (Decimal("37"), Decimal("4")))
+        self.assertFalse(Lancamento.objects.filter(categoria="material").exists())
+
+    def test_primeiro_acesso_cria_a_senha(self):
+        Estudio.atual().definir_senha_financeiro("")
+        r = self.client.get("/financeiro/entrar/")
+        self.assertContains(r, "Criar senha do financeiro")
+        r = self.client.post("/financeiro/entrar/", {"senha": "9876", "confirmar": "9876", "next": "/caixa/"})
+        self.assertRedirects(r, "/caixa/")
+        self.assertTrue(Estudio.atual().confere_senha_financeiro("9876"))
+        self.assertNotIn("9876", Estudio.atual().senha_financeiro)  # guardada criptografada
 
 
 class UtilTests(TestCase):

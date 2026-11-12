@@ -2,7 +2,7 @@
 {% block titulo %}Estoque{% endblock %}
 {% block conteudo %}
 <div class="cabecalho">
-  <div><h1>Estoque</h1><p class="suave" style="margin:0">{{ materiais|length }} material(is) · {{ total|dinheiro }} em estoque</p></div>
+  <div><h1>Estoque</h1><p class="suave" style="margin:0">{{ materiais|length }} material(is) · {% valor total %} em estoque</p></div>
   <div class="acoes">
     {% if alerta %}<a class="btn btn-sec" href="{% url 'estoque:lista' %}">Ver todos</a>{% else %}<a class="btn btn-sec" href="?filtro=alerta"><svg class="ico"><use href="#i-alerta"/></svg>Só os alertas</a>{% endif %}
     <a class="btn" href="{% url 'estoque:novo' %}"><svg class="ico"><use href="#i-mais"/></svg>Novo material</a>
@@ -18,7 +18,7 @@
         <td class="num"><strong class="{% if m.quantidade < 0 %}negativo{% endif %}">{{ m.quantidade|numero }}</strong> {{ m.unidade }}</td>
         <td class="num so-tela-grande">{{ m.estoque_minimo|numero }}</td>
         <td class="so-tela-grande">{{ m.validade|date:"d/m/Y"|default:"—" }}</td>
-        <td class="num so-tela-grande">{{ m.custo_unitario|dinheiro }}</td>
+        <td class="num so-tela-grande">{% valor m.custo_unitario %}</td>
         <td class="num">{% if m.vencido %}<span class="tag tag-erro">vencido</span>{% elif m.vencendo %}<span class="tag tag-alerta">vencendo</span>{% endif %}
           {% if m.abaixo_do_minimo %}<span class="tag tag-alerta">comprar</span>{% endif %}</td>
       </tr>

@@ -8,7 +8,7 @@
   <div class="card">
     <div class="form-grid">
       {% include "_campo.html" with campo=form.nome %}
-      {% include "_campo.html" with campo=form.preco %}
+      {% if form.preco %}{% include "_campo.html" with campo=form.preco %}{% endif %}
       {% include "_campo.html" with campo=form.duracao_min %}
       {% include "_campo.html" with campo=form.retorno_dias %}
       {% include "_campo.html" with campo=form.cor %}
@@ -16,6 +16,7 @@
       {% include "_campo.html" with campo=form.descricao largo=True %}
       {% include "_campo.html" with campo=form.cuidados_pos largo=True %}
     </div>
+    {% if not form.preco %}<p class="suave" style="font-size:.85rem;margin:8px 0 0"><svg class="ico"><use href="#i-cadeado"/></svg> Valores ocultos. <a href="{% url 'financeiro_entrar' %}?next={{ request.get_full_path|urlencode }}">Abrir o financeiro</a></p>{% endif %}
   </div>
   <div class="card">
     <h2><svg class="ico"><use href="#i-caixa"/></svg>Materiais gastos por sessão</h2>
@@ -34,7 +35,7 @@
       {% endfor %}
       </tbody>
     </table></div>
-    {% if proc %}<p style="margin-bottom:0">Custo atual em materiais: <strong>{{ proc.custo_material|dinheiro }}</strong></p>{% endif %}
+    {% if proc %}<p style="margin-bottom:0">Custo atual em materiais: <strong>{% valor proc.custo_material %}</strong></p>{% endif %}
   </div>
   <button class="btn" type="submit">Salvar procedimento</button>
 </form>

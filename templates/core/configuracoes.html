@@ -2,7 +2,7 @@
 {% block titulo %}Configurações{% endblock %}
 {% block conteudo %}
 <h1>Configurações</h1>
-<p class="suave">Dados do seu espaço (saem na ficha e nos termos), horário, mensagens do WhatsApp e taxas da maquininha.</p>
+<p class="suave">Dados do seu espaço (saem na ficha e nos termos), horário, mensagens do WhatsApp e a senha do financeiro.</p>
 
 <form method="post" enctype="multipart/form-data">{% csrf_token %}
   {% if form.non_field_errors %}<div class="erros-gerais">{{ form.non_field_errors|join:" " }}</div>{% endif %}
@@ -37,27 +37,17 @@
     </fieldset>
   </div>
 
-  <div class="card">
-    <h2>Formas de pagamento e taxas</h2>
-    <p class="suave" style="margin-top:0">A taxa é descontada das entradas para mostrar o que sobra de verdade. Coloque as taxas da sua maquininha.</p>
-    {{ formas.management_form }}
-    {% if formas.non_form_errors %}<div class="erros-gerais">{{ formas.non_form_errors|join:" " }}</div>{% endif %}
-    <div class="tabela-wrap">
-      <table>
-        <thead><tr><th>Forma</th><th>Taxa (%)</th><th>Ordem</th><th>Ativa</th></tr></thead>
-        <tbody>
-        {% for f in formas %}
-          <tr>{{ f.id }}
-            <td>{{ f.nome }}{% for e in f.nome.errors %}<br><small class="negativo">{{ e }}</small>{% endfor %}</td>
-            <td style="max-width:120px">{{ f.taxa_percentual }}</td>
-            <td style="max-width:90px">{{ f.ordem }}</td>
-            <td>{{ f.ativo }}</td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
   <button class="btn" type="submit">Salvar configurações</button>
 </form>
+
+<div class="card" style="margin-top:18px">
+  <h2><svg class="ico"><use href="#i-cadeado"/></svg>Financeiro</h2>
+  <p class="suave" style="margin-top:0">Valores (caixa, preços, custos, pacotes) só aparecem com a senha do financeiro, que é diferente da senha de login.
+    Ela tranca sozinha depois de alguns minutos sem usar.</p>
+  <div class="acoes">
+    {% if estudio.tem_senha_financeiro %}<a class="btn btn-sec" href="{% url 'financeiro_senha' %}">Trocar a senha do financeiro</a>
+    {% else %}<a class="btn" href="{% url 'financeiro_entrar' %}">Criar a senha do financeiro</a>{% endif %}
+    <a class="btn btn-sec" href="{% url 'financeiro:formas' %}">Formas de pagamento e taxas</a>
+  </div>
+</div>
 {% endblock %}

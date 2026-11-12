@@ -50,6 +50,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "core.middleware.LoginObrigatorioMiddleware",
+    "core.financeiro.FinanceiroMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -65,6 +66,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "core.financeiro.contexto",
             ],
         },
     },
@@ -159,6 +161,10 @@ LOGGING = {
         "django.request": {"handlers": ["console"], "level": "ERROR", "propagate": False},
     },
 }
+
+# Senha do financeiro: valores (caixa, preços, custos) só aparecem depois dela.
+# Tranca sozinho depois de X minutos sem usar o sistema.
+FINANCEIRO_MINUTOS = int(os.environ.get("FINANCEIRO_MINUTOS", "15"))
 
 # Login: bloqueia 15 minutos depois de 5 senhas erradas seguidas do mesmo IP.
 LOGIN_MAX_TENTATIVAS = int(os.environ.get("LOGIN_MAX_TENTATIVAS", "5"))

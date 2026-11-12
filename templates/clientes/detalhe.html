@@ -24,7 +24,7 @@
 {% endif %}{% endwith %}
 
 <nav class="abas">
-  {% for a in abas %}<a href="?aba={{ a }}"{% if a == aba %} class="ativo"{% endif %}>{% if a == "resumo" %}Resumo{% elif a == "ficha" %}Ficha{% elif a == "evolucao" %}Evolução{% elif a == "fotos" %}Fotos ({{ fotos|length }}){% elif a == "agenda" %}Atendimentos{% elif a == "pacotes" %}Pacotes{% else %}Financeiro{% endif %}</a>{% endfor %}
+  {% for a in abas %}<a href="?aba={{ a }}"{% if a == aba %} class="ativo"{% endif %}>{% if a == "resumo" %}Resumo{% elif a == "ficha" %}Ficha{% elif a == "evolucao" %}Evolução{% elif a == "fotos" %}Fotos ({{ fotos|length }}){% elif a == "agenda" %}Atendimentos{% elif a == "pacotes" %}Pacotes{% else %}{% if not financeiro_liberado %}<svg class="ico" style="width:14px;height:14px"><use href="#i-cadeado"/></svg> {% endif %}Financeiro{% endif %}</a>{% endfor %}
 </nav>
 
 {% if aba == "resumo" %}
@@ -185,7 +185,7 @@
     <tbody>
     {% for a in agendamentos %}
       <tr><td><a href="{% url 'agenda:detalhe' a.pk %}">{{ a.inicio|date:"d/m/Y H:i" }}</a></td><td>{{ a.procedimento }}{% if a.pacote %} <span class="tag tag-roxo">pacote</span>{% endif %}</td>
-        <td><span class="tag status-{{ a.status }}">{{ a.get_status_display }}</span></td><td class="num">{% if a.pacote %}—{% else %}{{ a.valor|dinheiro }}{% endif %}</td></tr>
+        <td><span class="tag status-{{ a.status }}">{{ a.get_status_display }}</span></td><td class="num">{% if a.pacote %}—{% else %}{% valor a.valor %}{% endif %}</td></tr>
     {% empty %}<tr><td colspan="4" class="vazio">Nenhum atendimento.</td></tr>{% endfor %}
     </tbody>
   </table></div>
@@ -200,24 +200,31 @@
     {% for p in pacotes %}
       <tr><td><a href="{% url 'agenda:pacote' p.pk %}">{{ p.sessoes }}x {{ p.procedimento }}</a><br><small>comprado em {{ p.data_compra|date:"d/m/Y" }}</small></td>
         <td>{{ p.usadas }} de {{ p.sessoes }}{% if p.restantes %} · <strong>{{ p.restantes }} restante(s)</strong>{% else %} <span class="tag tag-ok">concluído</span>{% endif %}</td>
-        <td class="num">{{ p.valor|dinheiro }}</td><td class="num">{% if p.a_receber %}<span class="negativo">{{ p.a_receber|dinheiro }}</span>{% else %}—{% endif %}</td></tr>
+        <td class="num">{% valor p.valor %}</td><td class="num">{% if p.a_receber %}<span class="negativo">{% valor p.a_receber %}</span>{% else %}—{% endif %}</td></tr>
     {% empty %}<tr><td colspan="4" class="vazio">Nenhum pacote.</td></tr>{% endfor %}
     </tbody>
   </table></div>
 </div>
 
+{% elif not financeiro_liberado %}
+<div class="card" style="text-align:center;padding:30px">
+  <svg class="ico" style="width:32px;height:32px;color:var(--primaria)"><use href="#i-cadeado"/></svg>
+  <h2 style="margin:10px 0 6px">Financeiro trancado</h2>
+  <p class="suave">Os pagamentos desta cliente só aparecem com a senha do financeiro.</p>
+  <a class="btn" href="{% url 'financeiro_entrar' %}?next={{ request.get_full_path|urlencode }}">Abrir o financeiro</a>
+</div>
 {% else %}
 <div class="grid grid-3" style="margin-bottom:18px">
-  <div class="card kpi"><div class="rotulo">Total pago</div><div class="valor">{{ financeiro.entradas|dinheiro }}</div></div>
+  <div class="card kpi"><div class="rotulo">Total pago</div><div class="valor">{% valor financeiro.entradas %}</div></div>
   <div class="card kpi"><div class="rotulo">Visitas</div><div class="valor">{{ total_visitas }}</div></div>
-  <div class="card kpi"><div class="rotulo">Média por visita</div><div class="valor">{% if total_visitas %}{{ media_visita|dinheiro }}{% else %}—{% endif %}</div></div>
+  <div class="card kpi"><div class="rotulo">Média por visita</div><div class="valor">{% if total_visitas %}{% valor media_visita %}{% else %}—{% endif %}</div></div>
 </div>
 <div class="card" style="padding:8px 14px">
   <div class="tabela-wrap"><table>
     <thead><tr><th>Data</th><th>Descrição</th><th>Forma</th><th class="num">Valor</th></tr></thead>
     <tbody>
     {% for l in lancamentos %}
-      <tr><td>{{ l.data|date:"d/m/Y" }}</td><td>{{ l.descricao }}</td><td>{{ l.forma|default:"—" }}{% if l.parcelas > 1 %} ({{ l.parcelas }}x){% endif %}</td><td class="num">{{ l.valor|dinheiro }}</td></tr>
+      <tr><td>{{ l.data|date:"d/m/Y" }}</td><td>{{ l.descricao }}</td><td>{{ l.forma|default:"—" }}{% if l.parcelas > 1 %} ({{ l.parcelas }}x){% endif %}</td><td class="num">{% valor l.valor %}</td></tr>
     {% empty %}<tr><td colspan="4" class="vazio">Nenhum pagamento registrado.</td></tr>{% endfor %}
     </tbody>
   </table></div>

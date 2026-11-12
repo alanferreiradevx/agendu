@@ -110,7 +110,7 @@ main { padding: 26px 28px 90px; max-width: 1240px; width: 100%; }
 .kpi.destaque .rotulo, .kpi.destaque small { color: #e6d6ee; }
 @media (max-width: 700px) { .kpi .valor { font-size: 1.2rem; } .kpi { padding: 12px 14px; } }
 
-.btn, button.btn {
+.btn {
   display: inline-flex; align-items: center; gap: 7px; padding: 10px 16px; border-radius: 10px; border: 0;
   background: var(--primaria); color: #fff; font: inherit; font-weight: 700; cursor: pointer; white-space: nowrap;
 }

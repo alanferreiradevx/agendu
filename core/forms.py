@@ -46,3 +46,28 @@ class EstudioForm(forms.ModelForm):
             "msg_retorno": forms.Textarea(attrs={"rows": 3}),
             "msg_aniversario": forms.Textarea(attrs={"rows": 2}),
         }
+
+
+class CriarSenhaFinanceiroForm(forms.Form):
+    senha = forms.CharField(label="Nova senha do financeiro", min_length=4, max_length=64,
+                            widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}),
+                            help_text="Pelo menos 4 caracteres (pode ser só números). Diferente da senha de login.")
+    confirmar = forms.CharField(label="Repita a senha", max_length=64,
+                                widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}))
+
+    def clean(self):
+        dados = super().clean()
+        if dados.get("senha") and dados.get("senha") != dados.get("confirmar"):
+            self.add_error("confirmar", "As duas senhas não são iguais.")
+        return dados
+
+
+class SenhaFinanceiroForm(forms.Form):
+    senha = forms.CharField(label="Senha do financeiro", max_length=64,
+                            widget=forms.PasswordInput(attrs={"autocomplete": "off", "autofocus": True}))
+
+
+class TrocarSenhaFinanceiroForm(CriarSenhaFinanceiroForm):
+    atual = forms.CharField(label="Senha atual do financeiro", max_length=64,
+                            widget=forms.PasswordInput(attrs={"autocomplete": "off"}))
+    field_order = ["atual", "senha", "confirmar"]

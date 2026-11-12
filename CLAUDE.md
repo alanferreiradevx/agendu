@@ -24,6 +24,14 @@ base técnica. Não misturar código, banco nem usuários dos dois.
   (ele converte para inteiro e perde os centavos): calcule na view.
 
 ## Regras de negócio
+- **Valores só com a senha do financeiro** (pedido do Alan em 12/11/2026; diferente da senha de login, guardada com hash em
+  `Estudio.senha_financeiro`). `core/financeiro.py`: `liberado(request)`, `@financeiro_obrigatorio`, `FinanceiroMiddleware`
+  (renova a cada página, tranca depois de `FINANCEIRO_MINUTOS`=15 parado, tranca `/admin/`), `{{ financeiro_liberado }}`
+  nos templates e `{% valor x %}` (mostra `R$ •••` trancado). Caixa, faturamento, formas/taxas, vender pacote, receber
+  pacote e desfazer conclusão exigem a senha. Trancado, os formulários **removem** os campos de valor (agendamento usa o
+  preço do procedimento; concluir usa o valor combinado; estoque entra sem custo e sem despesa). **Toda tela nova com
+  dinheiro segue a mesma regra, com teste** (`FinanceiroTrancadoTests`). Esqueceu: `agendu-manage redefinir_senha_financeiro`.
+- Painel: agendamentos primeiro (hoje e próximos 6 dias) e nenhum valor em dinheiro.
 - **Estoque só muda por `estoque.models.movimentar()`** (grava `Movimento` e atualiza a quantidade; compra com custo
   faz média ponderada). Pode ficar negativo (não trava o atendimento; o painel avisa).
 - **Concluir/desfazer atendimento só por `agenda/servicos.py`** (`concluir`, `desfazer_conclusao`), em transação:
@@ -52,7 +60,7 @@ atualizar: `.\deploy\enviar.ps1 -Servidor root@187.41.119.140` (roda os testes a
 ```
 .venv\Scripts\activate
 python manage.py migrate
-python manage.py dados_demo     # demo / Agendu#2026 (só com DEBUG)
+python manage.py dados_demo     # demo / Agendu#2026, senha do financeiro 1234 (só com DEBUG)
 python manage.py runserver 8002
 python manage.py test           # rodar sempre antes de entregar
 ```

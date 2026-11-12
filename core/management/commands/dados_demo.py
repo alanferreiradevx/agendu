@@ -3,7 +3,7 @@ Cria dados de exemplo para conhecer o sistema (SÓ em desenvolvimento).
 
     python manage.py dados_demo
 
-Usuário: demo / senha: Agendu#2026
+Usuário: demo / senha: Agendu#2026 · senha do financeiro: 1234
 """
 
 from datetime import date, datetime, time, timedelta
@@ -36,6 +36,8 @@ class Command(BaseCommand):
         e.nome, e.profissional, e.telefone = "Studio Bella Pele", "Ana", "(11) 91234-5678"
         e.endereco, e.instagram = "Rua das Flores, 100 - São Paulo/SP", "@studiobellapele"
         e.save()
+        if not e.tem_senha_financeiro:
+            e.definir_senha_financeiro("1234")
 
         def mat(nome, unidade, qtd, total, minimo):
             m, criado = Material.objects.get_or_create(nome=nome, defaults={"unidade": unidade, "estoque_minimo": minimo})
@@ -111,4 +113,4 @@ class Command(BaseCommand):
         Lancamento.objects.create(tipo="saida", categoria="aluguel", descricao="Aluguel da sala", valor=Decimal("1200"),
                                   data=hoje.replace(day=1))
         Lancamento.objects.create(tipo="saida", categoria="marketing", descricao="Anúncio Instagram", valor=Decimal("150"))
-        self.stdout.write(self.style.SUCCESS("Pronto! Entre com demo / Agendu#2026"))
+        self.stdout.write(self.style.SUCCESS("Pronto! Entre com demo / Agendu#2026 (senha do financeiro: 1234)"))

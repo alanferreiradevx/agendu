@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block titulo %}Senha do financeiro{% endblock %}
+{% block conteudo %}
+<p style="margin:0 0 8px"><a href="{% url 'configuracoes' %}">← Configurações</a></p>
+<h1>Trocar a senha do financeiro</h1>
+<form method="post" class="card" style="max-width:460px;margin-top:14px">{% csrf_token %}
+  {% for campo in form %}{% include "_campo.html" %}<div style="height:10px"></div>{% endfor %}
+  <button class="btn" type="submit">Salvar nova senha</button>
+</form>
+{% endblock %}

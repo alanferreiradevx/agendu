@@ -11,7 +11,7 @@
     {% include "_campo.html" with campo=form.data %}
     {% include "_campo.html" with campo=form.hora %}
     {% include "_campo.html" with campo=form.duracao %}
-    {% include "_campo.html" with campo=form.valor %}
+    {% if form.valor %}{% include "_campo.html" with campo=form.valor %}{% endif %}
     {% include "_campo.html" with campo=form.pacote largo=True %}
     {% include "_campo.html" with campo=form.observacoes largo=True %}
   </div>

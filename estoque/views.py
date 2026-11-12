@@ -5,6 +5,7 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from core.financeiro import liberado
 from core.utils import centavos
 from financeiro.models import Lancamento
 
@@ -25,8 +26,9 @@ def lista(request):
 
 def editar(request, pk=None):
     material = get_object_or_404(Material, pk=pk) if pk else None
-    form = MaterialForm(request.POST or None, instance=material)
-    entrada = EntradaForm(request.POST or None, prefix="entrada") if not pk else None
+    aberto = liberado(request)
+    form = MaterialForm(request.POST or None, instance=material, financeiro=aberto)
+    entrada = EntradaForm(request.POST or None, prefix="entrada", financeiro=aberto) if not pk else None
     if request.method == "POST" and form.is_valid() and (entrada is None or not entrada.has_changed() or entrada.is_valid()):
         with transaction.atomic():
             material = form.save()
@@ -54,11 +56,12 @@ def _registrar_entrada(material, d):
 
 def detalhe(request, pk):
     material = get_object_or_404(Material, pk=pk)
-    entrada = EntradaForm(prefix="entrada")
+    aberto = liberado(request)
+    entrada = EntradaForm(prefix="entrada", financeiro=aberto)
     ajuste = AjusteForm(prefix="ajuste", initial={"saldo_real": material.quantidade})
     if request.method == "POST":
         if "entrada-quantidade" in request.POST:
-            entrada = EntradaForm(request.POST, prefix="entrada")
+            entrada = EntradaForm(request.POST, prefix="entrada", financeiro=aberto)
             if entrada.is_valid():
                 with transaction.atomic():
                     _registrar_entrada(material, entrada.cleaned_data)

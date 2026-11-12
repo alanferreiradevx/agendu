@@ -39,13 +39,19 @@ outra pasta, outro banco, outro serviço).
   faturado/despesas/lucro/ticket médio do mês, alertas de estoque, **hora do retorno**
   (quem chamar de volta) e aniversariantes do mês.
 
+- **Senha do financeiro**: tudo que mostra dinheiro (caixa, faturamento, taxas, preços, custos do
+  estoque, valores de pacotes e atendimentos) fica trancado atrás de uma senha separada da de login.
+  Tranca sozinho depois de 15 minutos sem usar, ou no botão "Trancar". Trancado, dá para agendar e
+  concluir atendimentos normalmente (o valor usado é o do procedimento, sem aparecer na tela).
+  Esqueceu a senha: `agendu-manage redefinir_senha_financeiro` no servidor.
+
 ## Rodar no computador (Windows)
 
 ```powershell
 cd C:\Users\mixcom\Downloads\agendu
 .venv\Scripts\activate
 python manage.py migrate
-python manage.py dados_demo      # dados de exemplo: usuário demo / senha Agendu#2026
+python manage.py dados_demo      # exemplo: usuário demo / senha Agendu#2026 / financeiro 1234
 python manage.py runserver 8002  # abre em http://127.0.0.1:8002
 python manage.py test            # rodar sempre antes de subir
 ```
