@@ -102,6 +102,6 @@ if certbot --nginx -d "$DOMINIO" "${CONTA[@]}" --agree-tos --redirect -n; then
 else
     echo ""
     echo "ATENÇÃO: não consegui o certificado. Confira se o DNS de $DOMINIO aponta para"
-    echo "este servidor e rode de novo:  certbot --nginx -d $DOMINIO -m $EMAIL --agree-tos --redirect -n"
+    echo "este servidor e rode de novo:  certbot --nginx -d $DOMINIO ${CONTA[*]} --agree-tos --redirect -n"
     exit 1
 fi
