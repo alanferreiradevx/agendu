@@ -380,3 +380,19 @@ class UtilTests(TestCase):
         self.assertEqual(brl(Decimal("1234.5")), "R$ 1.234,50")
         self.assertEqual(whatsapp_url("(11) 98765-4321", "Oi"), "https://wa.me/5511987654321?text=Oi")
         self.assertEqual(whatsapp_url(""), "")
+
+
+class TrocarAcessoTests(TestCase):
+    def test_troca_email_e_senha_pelo_comando(self):
+        from unittest import mock
+
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        get_user_model().objects.create_user("x", email="velho@a.com", password="senha-forte-123")
+        with mock.patch("builtins.input", return_value="Novo@Estudio.com"), \
+                mock.patch("getpass.getpass", side_effect=["Outra-senha-2026", "Outra-senha-2026"]):
+            call_command("trocar_acesso", stdout=StringIO())
+        self.assertTrue(self.client.login(username="novo@estudio.com", password="Outra-senha-2026"))
+        self.assertFalse(self.client.login(username="velho@a.com", password="senha-forte-123"))
