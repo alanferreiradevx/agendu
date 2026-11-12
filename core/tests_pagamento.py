@@ -21,8 +21,10 @@ class ComoPagaTests(Base):
     def test_formas_aparecem_como_botoes_com_parcelas(self):
         r = self.client.get("/agenda/novo/")
         for texto in ("Forma de pagamento", 'type="radio"', "PIX", "Dinheiro", "Cartão de débito",
-                      "Cartão de crédito parcelado", "Ainda não sei", "12x", f'data-parcelaveis="{self.parcelado.pk}"'):
+                      "Cartão de crédito parcelado", "12x", f'data-parcelaveis="{self.parcelado.pk}"'):
             self.assertContains(r, texto)
+        self.assertNotContains(r, "Ainda não sei")
+        self.assertNotContains(self.client.get(f"/agenda/{self.marcar(dias=2).pk}/"), "Ainda não sei")
 
     def test_agenda_parcelado_e_a_conclusao_ja_vem_marcada(self):
         self.client.post("/agenda/novo/", {**self.dados, "forma_prevista": self.parcelado.pk, "parcelas_previstas": 3})

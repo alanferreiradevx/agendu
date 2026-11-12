@@ -115,7 +115,7 @@ def forma_prevista(request, pk):
     form = FormaPrevistaForm(request.POST, instance=ag)
     if form.is_valid():
         form.save()
-        messages.success(request, f"Forma de pagamento: {ag.pagamento_previsto or 'ainda não sei'}.")
+        messages.success(request, f"Forma de pagamento: {ag.pagamento_previsto or 'não informada'}.")
     else:
         messages.error(request, " ".join(e for erros in form.errors.values() for e in erros))
     return redirect("agenda:detalhe", pk)

@@ -65,7 +65,7 @@ class AgendamentoForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if not financeiro:
             del self.fields["valor"]  # trancado: usa o preço do procedimento sem mostrar
-        pagamento.preparar(self, "forma_prevista", vazio="Ainda não sei")
+        pagamento.preparar(self, "forma_prevista")
         self.fields["forma_prevista"].required = False
         self.fields["forma_prevista"].label = "Forma de pagamento"
         self.fields["parcelas_previstas"] = pagamento.campo_parcelas()
@@ -116,7 +116,7 @@ class FormaPrevistaForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        pagamento.preparar(self, "forma_prevista", vazio="Ainda não sei")
+        pagamento.preparar(self, "forma_prevista")
         self.fields["forma_prevista"].required = False
         self.fields["forma_prevista"].label = ""  # o quadro já tem o título "Forma de pagamento"
         self.fields["parcelas_previstas"] = pagamento.campo_parcelas()
