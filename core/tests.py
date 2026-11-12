@@ -40,7 +40,7 @@ class Base(TestCase):
 
     def setUp(self):
         cache.clear()
-        self.user = get_user_model().objects.create_user("ana", password="senha-forte-123")
+        self.user = get_user_model().objects.create_user("ana", email="ana@estudio.com", password="senha-forte-123")
         self.client.force_login(self.user)
         Estudio.atual().definir_senha_financeiro("4321")
         self.abrir_financeiro()
@@ -79,9 +79,18 @@ class LoginTests(Base):
     def test_bloqueia_depois_de_5_senhas_erradas(self):
         self.client.logout()
         for _ in range(5):
-            self.client.post("/entrar/", {"username": "ana", "password": "errada"})
-        r = self.client.post("/entrar/", {"username": "ana", "password": "senha-forte-123"})
+            self.client.post("/entrar/", {"username": "ana@estudio.com", "password": "errada"})
+        r = self.client.post("/entrar/", {"username": "ana@estudio.com", "password": "senha-forte-123"})
         self.assertContains(r, "Muitas tentativas")
+
+    def test_entra_pelo_email_e_nao_pelo_usuario(self):
+        self.client.logout()
+        r = self.client.get("/entrar/")
+        self.assertContains(r, 'type="email"')
+        r = self.client.post("/entrar/", {"username": "ana", "password": "senha-forte-123"})
+        self.assertContains(r, "E-mail ou senha incorretos")
+        r = self.client.post("/entrar/", {"username": "  ANA@Estudio.com ", "password": "senha-forte-123"})
+        self.assertRedirects(r, "/")
 
 
 class PaginasTests(Base):

@@ -52,7 +52,7 @@ outra pasta, outro banco, outro serviço).
 cd C:\Users\mixcom\Downloads\agendu
 .venv\Scripts\activate
 python manage.py migrate
-python manage.py dados_demo      # exemplo: usuário demo / senha Agendu#2026 / financeiro 1234
+python manage.py dados_demo      # exemplo: e-mail demo@agendu.local / senha Agendu#2026 / financeiro 1234
 python manage.py runserver 8002  # abre em http://127.0.0.1:8002
 python manage.py test            # rodar sempre antes de subir
 ```
@@ -66,7 +66,7 @@ Primeira vez numa máquina nova: `py -3.12 -m venv .venv` e
    **A** com nome `agendu` apontando para `187.41.119.140`.
 2. **Instalar** (uma vez):
    `.\deploy\enviar.ps1 -Servidor root@187.41.119.140 -Instalar -Dominio agendu.ativix.co -Email seu@email.com`
-3. **Criar seu usuário** (uma vez; você mesmo digita a senha):
+3. **Criar seu usuário** (uma vez; você mesmo digita a senha). **Preencha o e-mail**: é com ele que se entra:
    `ssh -t root@187.41.119.140 agendu-manage createsuperuser`
 4. **Atualizar** depois de mudar o código:
    `.\deploy\enviar.ps1 -Servidor root@187.41.119.140`

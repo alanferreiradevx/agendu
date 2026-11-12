@@ -3,7 +3,7 @@ Cria dados de exemplo para conhecer o sistema (SÓ em desenvolvimento).
 
     python manage.py dados_demo
 
-Usuário: demo / senha: Agendu#2026 · senha do financeiro: 1234
+E-mail: demo@agendu.local / senha: Agendu#2026 · senha do financeiro: 1234
 """
 
 from datetime import date, datetime, time, timedelta
@@ -113,4 +113,4 @@ class Command(BaseCommand):
         Lancamento.objects.create(tipo="saida", categoria="aluguel", descricao="Aluguel da sala", valor=Decimal("1200"),
                                   data=hoje.replace(day=1))
         Lancamento.objects.create(tipo="saida", categoria="marketing", descricao="Anúncio Instagram", valor=Decimal("150"))
-        self.stdout.write(self.style.SUCCESS("Pronto! Entre com demo / Agendu#2026 (senha do financeiro: 1234)"))
+        self.stdout.write(self.style.SUCCESS("Pronto! Entre com demo@agendu.local / Agendu#2026 (senha do financeiro: 1234)"))

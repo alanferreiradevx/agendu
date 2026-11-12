@@ -102,6 +102,9 @@ CACHES = {
     }
 }
 
+# Entra pelo e-mail (core/backends.py), não pelo nome de usuário.
+AUTHENTICATION_BACKENDS = ["core.backends.EmailBackend"]
+
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "painel"
 LOGOUT_REDIRECT_URL = "login"

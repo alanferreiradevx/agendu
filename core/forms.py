@@ -12,9 +12,14 @@ class LoginForm(AuthenticationForm):
 
     error_messages = {
         **AuthenticationForm.error_messages,
-        "invalid_login": "Usuário ou senha incorretos.",
+        "invalid_login": "E-mail ou senha incorretos.",
         "bloqueado": "Muitas tentativas erradas. Espere 15 minutos e tente de novo.",
     }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["username"].label = "E-mail"
+        self.fields["username"].widget = forms.EmailInput(attrs={"autofocus": True, "autocomplete": "email"})
 
     def _chave(self):
         return "login-tentativas:" + ip_do_cliente(self.request) if self.request else "login-tentativas:?"

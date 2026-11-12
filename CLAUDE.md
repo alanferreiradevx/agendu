@@ -15,7 +15,8 @@ base técnica. Não misturar código, banco nem usuários dos dois.
   botão do WhatsApp. Fontes Manrope e JetBrains Mono. Logos SVG em `static/img/` (`logo.svg`, `logo-branco.svg`, `icone.svg`).
 - Celular primeiro: menu lateral vira gaveta e aparece a barra de baixo (Painel, Agenda, +, Clientes, Caixa).
 - **Todo o sistema exige login** (`core.middleware.LoginObrigatorioMiddleware`; livres só `/entrar/`, `/static/`, `/admin/`).
-  Login com bloqueio (5 erros por IP = 15 min, cache em arquivo).
+  Login **pelo e-mail** (`core/backends.EmailBackend`, sem diferença de maiúsculas; o nome de usuário não serve para entrar),
+  com bloqueio (5 erros por IP = 15 min, cache em arquivo). Usuário sem e-mail não consegue entrar.
 - **Fotos privadas** (LGPD): `config/storage.py` (`PRIVADO_ROOT`), servidas só por `clientes:foto`/`foto_mini`.
   Nunca criar `/media/` público. Fotos são reduzidas para 2000 px + miniatura 480 px ao salvar (`Foto.save`).
 - WhatsApp: só link `wa.me` com texto pronto (`core.utils.whatsapp_url`), sem API paga. Textos em `core.Estudio`
@@ -64,7 +65,7 @@ atualizar: `.\deploy\enviar.ps1 -Servidor root@187.41.119.140` (roda os testes a
 ```
 .venv\Scripts\activate
 python manage.py migrate
-python manage.py dados_demo     # demo / Agendu#2026, senha do financeiro 1234 (só com DEBUG)
+python manage.py dados_demo     # demo@agendu.local / Agendu#2026, senha do financeiro 1234 (só com DEBUG)
 python manage.py runserver 8002
 python manage.py test           # rodar sempre antes de entregar
 ```
