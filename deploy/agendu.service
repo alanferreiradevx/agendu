@@ -1,0 +1,19 @@
+# Serviço que mantém o Agendu rodando (gunicorn na porta 8002; o Ativix usa a 8001).
+# Instalado em /etc/systemd/system/agendu.service pelo instalar_servidor.sh.
+[Unit]
+Description=Agendu - agenda, clientes, caixa e estoque
+After=network.target postgresql.service
+
+[Service]
+User=agendu
+Group=agendu
+WorkingDirectory=/srv/agendu/app
+EnvironmentFile=/etc/agendu/env
+ExecStart=/srv/agendu/venv/bin/gunicorn config.wsgi:application \
+    --bind 127.0.0.1:8002 --workers 2 --timeout 120 \
+    --access-logfile - --error-logfile -
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

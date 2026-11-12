@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block titulo %}Clientes{% endblock %}
+{% block conteudo %}
+<div class="cabecalho">
+  <div><h1>Clientes</h1><p class="suave" style="margin:0">{{ pagina.paginator.count }} cliente(s)</p></div>
+  <a class="btn" href="{% url 'clientes:nova' %}"><svg class="ico"><use href="#i-mais"/></svg>Nova cliente</a>
+</div>
+<form method="get" class="card acoes" style="padding:14px">
+  <input type="search" name="q" value="{{ termo }}" placeholder="Nome, telefone, e-mail ou CPF" style="flex:1;min-width:200px">
+  <label class="campo-check" style="display:flex"><input type="checkbox" name="inativos" value="1" {% if request.GET.inativos == "1" %}checked{% endif %}> Mostrar inativas</label>
+  <button class="btn btn-sec" type="submit">Buscar</button>
+</form>
+<div class="card" style="padding:8px 14px">
+  <div class="tabela-wrap">
+    <table>
+      <thead><tr><th>Cliente</th><th class="so-tela-grande">WhatsApp</th><th class="so-tela-grande">Última visita</th><th></th></tr></thead>
+      <tbody>
+      {% for c in pagina %}
+        <tr>
+          <td><a href="{% url 'clientes:detalhe' c.pk %}">{{ c }}</a>{% if not c.ativo %} <span class="tag">inativa</span>{% endif %}
+            {% if c.idade %}<br><small>{{ c.idade }} anos</small>{% endif %}</td>
+          <td class="so-tela-grande mono">{{ c.telefone|default:"—" }}</td>
+          <td class="so-tela-grande">{{ c.ultima_visita|date:"d/m/Y"|default:"—" }}</td>
+          <td class="num">{% if c.telefone %}<a class="btn btn-whats btn-peq" href="{{ c.whatsapp }}" target="_blank" rel="noopener" aria-label="WhatsApp"><svg class="ico"><use href="#i-whats"/></svg></a>{% endif %}
+            <a class="btn btn-sec btn-peq" href="{% url 'agenda:novo' %}?cliente={{ c.pk }}">Agendar</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4" class="vazio">Nenhuma cliente encontrada. <a href="{% url 'clientes:nova' %}">Cadastrar</a></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% if pagina.has_other_pages %}
+<div class="acoes">
+  {% if pagina.has_previous %}<a class="btn btn-sec" href="?q={{ termo|urlencode }}&pagina={{ pagina.previous_page_number }}">Anterior</a>{% endif %}
+  <span class="suave">Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+  {% if pagina.has_next %}<a class="btn btn-sec" href="?q={{ termo|urlencode }}&pagina={{ pagina.next_page_number }}">Próxima</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

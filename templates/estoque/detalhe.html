@@ -1,0 +1,63 @@
+{% extends "base.html" %}{% load agendu %}
+{% block titulo %}{{ material }}{% endblock %}
+{% block conteudo %}
+<p style="margin:0 0 8px"><a href="{% url 'estoque:lista' %}">← Estoque</a></p>
+<div class="cabecalho">
+  <div>
+    <h1>{{ material }}{% if not material.ativo %} <span class="tag">inativo</span>{% endif %}</h1>
+    <p class="suave" style="margin:0">{{ material.get_unidade_display }}{% if material.fornecedor %} · {{ material.fornecedor }}{% endif %}</p>
+  </div>
+  <a class="btn btn-sec" href="{% url 'estoque:editar' material.pk %}">Editar</a>
+</div>
+
+<div class="grid grid-4" style="margin-bottom:18px">
+  <div class="card kpi {% if material.abaixo_do_minimo %}aviso{% endif %}"><div class="rotulo">Em estoque</div><div class="valor {% if material.quantidade < 0 %}negativo{% endif %}">{{ material.quantidade|numero }} <small>{{ material.unidade }}</small></div><small>mínimo {{ material.estoque_minimo|numero }}</small></div>
+  <div class="card kpi"><div class="rotulo">Custo por {{ material.get_unidade_display }}</div><div class="valor">{{ material.custo_unitario|dinheiro }}</div></div>
+  <div class="card kpi"><div class="rotulo">Valor em estoque</div><div class="valor">{{ material.valor_em_estoque|dinheiro }}</div></div>
+  <div class="card kpi {% if material.vencido or material.vencendo %}aviso{% endif %}"><div class="rotulo">Validade</div><div class="valor" style="font-size:1.2rem">{{ material.validade|date:"d/m/Y"|default:"—" }}</div>{% if material.vencido %}<small class="negativo">vencido</small>{% elif material.vencendo %}<small>vence em breve</small>{% endif %}</div>
+</div>
+
+<div class="grid grid-2">
+  <form method="post" class="card">{% csrf_token %}
+    <h2>Entrada (compra)</h2>
+    <div class="form-grid">
+      {% include "_campo.html" with campo=entrada.quantidade %}
+      {% include "_campo.html" with campo=entrada.valor_total %}
+      {% include "_campo.html" with campo=entrada.validade %}
+      {% include "_campo.html" with campo=entrada.forma %}
+      {% include "_campo.html" with campo=entrada.descricao %}
+      {% include "_campo.html" with campo=entrada.lancar_despesa %}
+    </div>
+    <div class="botoes-form"><button class="btn" type="submit">Registrar entrada</button></div>
+  </form>
+  <div>
+    <form method="post" class="card">{% csrf_token %}
+      <h2>Ajustar (contagem, perda)</h2>
+      <div class="form-grid">
+        {% include "_campo.html" with campo=ajuste.saldo_real %}
+        {% include "_campo.html" with campo=ajuste.motivo %}
+      </div>
+      <div class="botoes-form"><button class="btn btn-sec" type="submit">Ajustar</button></div>
+    </form>
+    <div class="card">
+      <h2>Usado em</h2>
+      <ul class="lista-limpa">{% for u in usos %}<li><span class="cresce"><a href="{% url 'agenda:procedimento_editar' u.procedimento.pk %}">{{ u.procedimento }}</a></span><span>{{ u.quantidade|numero }} {{ material.unidade }} por sessão</span></li>{% empty %}<li class="suave">Nenhum procedimento usa este material.</li>{% endfor %}</ul>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="padding:8px 14px">
+  <h2 style="padding-top:10px">Movimentações</h2>
+  <div class="tabela-wrap"><table>
+    <thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th class="num">Quantidade</th><th class="num">Saldo</th></tr></thead>
+    <tbody>
+    {% for m in movimentos %}
+      <tr><td>{{ m.data|date:"d/m/Y H:i" }}</td><td>{{ m.get_tipo_display }}</td>
+        <td>{% if m.agendamento %}<a href="{% url 'agenda:detalhe' m.agendamento.pk %}">{{ m.descricao }}</a>{% else %}{{ m.descricao }}{% endif %}</td>
+        <td class="num {% if m.quantidade < 0 %}negativo{% else %}positivo{% endif %}">{% if m.quantidade > 0 %}+{% endif %}{{ m.quantidade|numero }}</td>
+        <td class="num">{{ m.saldo_depois|numero }}</td></tr>
+    {% empty %}<tr><td colspan="5" class="vazio">Nenhuma movimentação.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</div>
+{% endblock %}

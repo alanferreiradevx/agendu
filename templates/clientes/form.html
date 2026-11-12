@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block titulo %}{% if cliente %}Editar {{ cliente }}{% else %}Nova cliente{% endif %}{% endblock %}
+{% block conteudo %}
+<p style="margin:0 0 8px"><a href="{% if cliente %}{% url 'clientes:detalhe' cliente.pk %}{% else %}{% url 'clientes:lista' %}{% endif %}">← Voltar</a></p>
+<h1>{% if cliente %}Editar {{ cliente }}{% else %}Nova cliente{% endif %}</h1>
+<form method="post" class="card" style="margin-top:14px">{% csrf_token %}
+  {% if form.non_field_errors %}<div class="erros-gerais">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <fieldset>
+    <legend>Dados</legend>
+    <div class="form-grid">
+      {% include "_campo.html" with campo=form.nome %}
+      {% include "_campo.html" with campo=form.telefone %}
+      {% include "_campo.html" with campo=form.email %}
+      {% include "_campo.html" with campo=form.nascimento %}
+      {% include "_campo.html" with campo=form.cpf %}
+      {% include "_campo.html" with campo=form.profissao %}
+      {% include "_campo.html" with campo=form.como_conheceu %}
+    </div>
+  </fieldset>
+  <fieldset>
+    <legend>Endereço</legend>
+    <div class="form-grid">
+      {% include "_campo.html" with campo=form.cep %}
+      {% include "_campo.html" with campo=form.logradouro %}
+      {% include "_campo.html" with campo=form.numero %}
+      {% include "_campo.html" with campo=form.complemento %}
+      {% include "_campo.html" with campo=form.bairro %}
+      {% include "_campo.html" with campo=form.cidade %}
+      {% include "_campo.html" with campo=form.uf %}
+    </div>
+  </fieldset>
+  <fieldset>
+    <legend>Observações</legend>
+    <div class="form-grid">
+      {% include "_campo.html" with campo=form.observacoes largo=True %}
+      {% include "_campo.html" with campo=form.ativo %}
+    </div>
+  </fieldset>
+  <div class="botoes-form">
+    <button class="btn" type="submit">{% if cliente %}Salvar{% else %}Salvar e preencher a ficha{% endif %}</button>
+  </div>
+</form>
+{% endblock %}

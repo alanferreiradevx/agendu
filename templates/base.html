@@ -1,0 +1,69 @@
+{% load static agendu %}<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#2a1838">
+  <title>{% block titulo %}Agendu{% endblock %} · Agendu</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'img/icone.svg' %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static_versao 'css/app.css' %}">
+  <script src="{% static_versao 'js/app.js' %}" defer></script>
+</head>
+<body>
+{% include "_icones.html" %}
+{% block corpo %}
+{% with rota=request.path %}
+<div class="app">
+  <aside class="lateral" id="lateral">
+    <a class="lateral-marca" href="{% url 'painel' %}" aria-label="Agendu - início"><img src="{% static 'img/logo-branco.svg' %}" alt="Agendu"></a>
+    <nav aria-label="Menu principal">
+      <a class="nav-item{% if rota == '/' %} ativo{% endif %}" href="{% url 'painel' %}"><svg class="ico"><use href="#i-painel"/></svg>Painel</a>
+      <a class="nav-item{% if rota == '/agenda/' or rota == '/agenda/novo/' or '/agenda/' in rota and '/procedimentos' not in rota and '/pacotes' not in rota %} ativo{% endif %}" href="{% url 'agenda:semana' %}"><svg class="ico"><use href="#i-agenda"/></svg>Agenda</a>
+      <a class="nav-item{% ativo_se '/clientes/' %}" href="{% url 'clientes:lista' %}"><svg class="ico"><use href="#i-clientes"/></svg>Clientes</a>
+      <a class="nav-item{% ativo_se '/agenda/pacotes' %}" href="{% url 'agenda:pacotes' %}"><svg class="ico"><use href="#i-pacote"/></svg>Pacotes</a>
+      <div class="nav-secao">Gestão</div>
+      <a class="nav-item{% if rota == '/caixa/' or '/caixa/novo' in rota %} ativo{% endif %}" href="{% url 'financeiro:caixa' %}"><svg class="ico"><use href="#i-dinheiro"/></svg>Caixa</a>
+      <a class="nav-item{% ativo_se '/caixa/faturamento' %}" href="{% url 'financeiro:faturamento' %}"><svg class="ico"><use href="#i-grafico"/></svg>Faturamento</a>
+      <a class="nav-item{% ativo_se '/estoque/' %}" href="{% url 'estoque:lista' %}"><svg class="ico"><use href="#i-caixa"/></svg>Estoque</a>
+      <a class="nav-item{% ativo_se '/agenda/procedimentos' %}" href="{% url 'agenda:procedimentos' %}"><svg class="ico"><use href="#i-brilho"/></svg>Procedimentos</a>
+      <a class="nav-item{% ativo_se '/configuracoes/' %}" href="{% url 'configuracoes' %}"><svg class="ico"><use href="#i-config"/></svg>Configurações</a>
+    </nav>
+    <div class="lateral-rodape">Agendu · by <a href="https://ativix.co" target="_blank" rel="noopener">Ativix</a></div>
+  </aside>
+  <div class="fundo-menu" onclick="document.body.classList.remove('menu-aberto')"></div>
+
+  <div class="corpo">
+    <header class="topo">
+      <button class="btn-icone so-celular" type="button" aria-label="Abrir menu" onclick="document.body.classList.toggle('menu-aberto')"><svg class="ico"><use href="#i-menu"/></svg></button>
+      <form class="busca" method="get" action="{% url 'busca' %}" role="search">
+        <svg class="ico"><use href="#i-busca"/></svg>
+        <input type="search" name="q" placeholder="Buscar cliente por nome ou telefone" aria-label="Buscar cliente">
+      </form>
+      <div class="espaco so-tela-grande"></div>
+      <a class="btn so-tela-grande" href="{% url 'agenda:novo' %}"><svg class="ico"><use href="#i-mais"/></svg>Agendar</a>
+      <a class="btn-icone so-tela-grande" href="{% url 'senha_trocar' %}" title="Trocar senha"><svg class="ico"><use href="#i-chave"/></svg></a>
+      <form method="post" action="{% url 'logout' %}" class="inline">{% csrf_token %}
+        <button class="btn-icone" type="submit" title="Sair" aria-label="Sair"><svg class="ico"><use href="#i-sair"/></svg></button>
+      </form>
+    </header>
+    <main>
+      {% if messages %}<ul class="mensagens">{% for m in messages %}<li class="{{ m.tags }}">{{ m }}</li>{% endfor %}</ul>{% endif %}
+      {% block conteudo %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<nav class="barra-baixo" aria-label="Atalhos">
+  <a href="{% url 'painel' %}"{% if rota == '/' %} class="ativo"{% endif %}><svg class="ico"><use href="#i-painel"/></svg>Painel</a>
+  <a href="{% url 'agenda:semana' %}"{% if rota == '/agenda/' %} class="ativo"{% endif %}><svg class="ico"><use href="#i-agenda"/></svg>Agenda</a>
+  <a class="mais" href="{% url 'agenda:novo' %}" aria-label="Agendar"><span class="bola"><svg class="ico"><use href="#i-mais"/></svg></span></a>
+  <a href="{% url 'clientes:lista' %}"{% if '/clientes/' in rota %} class="ativo"{% endif %}><svg class="ico"><use href="#i-clientes"/></svg>Clientes</a>
+  <a href="{% url 'financeiro:caixa' %}"{% if rota == '/caixa/' %} class="ativo"{% endif %}><svg class="ico"><use href="#i-dinheiro"/></svg>Caixa</a>
+</nav>
+{% endwith %}
+{% endblock %}
+</body>
+</html>

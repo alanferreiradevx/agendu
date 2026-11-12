@@ -1,0 +1,51 @@
+{% extends "base.html" %}{% load agendu %}
+{% block titulo %}Pacote · {{ p.cliente }}{% endblock %}
+{% block conteudo %}
+<p style="margin:0 0 8px"><a href="{% url 'agenda:pacotes' %}">← Pacotes</a></p>
+<div class="cabecalho">
+  <div>
+    <h1>{{ p.sessoes }}x {{ p.procedimento }}</h1>
+    <p class="suave" style="margin:0"><a href="{% url 'clientes:detalhe' p.cliente.pk %}">{{ p.cliente }}</a> · comprado em {{ p.data_compra|date:"d/m/Y" }}{% if p.validade %} · vale até {{ p.validade|date:"d/m/Y" }}{% endif %}</p>
+  </div>
+  {% if p.restantes and not p.vencido %}<a class="btn" href="{% url 'agenda:novo' %}?pacote={{ p.pk }}"><svg class="ico"><use href="#i-agenda"/></svg>Agendar sessão</a>{% endif %}
+</div>
+
+<div class="grid grid-4" style="margin-bottom:18px">
+  <div class="card kpi"><div class="rotulo">Sessões feitas</div><div class="valor">{{ p.usadas }} <small>de {{ p.sessoes }}</small></div></div>
+  <div class="card kpi"><div class="rotulo">Restantes</div><div class="valor">{{ p.restantes }}</div></div>
+  <div class="card kpi"><div class="rotulo">Valor</div><div class="valor">{{ p.valor|dinheiro }}</div><small>{{ p.valor_sessao|dinheiro }} por sessão</small></div>
+  <div class="card kpi"><div class="rotulo">A receber</div><div class="valor {% if p.a_receber %}negativo{% endif %}">{{ p.a_receber|dinheiro }}</div></div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <h2>Sessões</h2>
+    <ul class="lista-limpa">
+    {% for a in sessoes %}
+      <li><span class="hora">{{ a.inicio|date:"d/m" }}</span><span class="cresce"><a href="{% url 'agenda:detalhe' a.pk %}">{{ a.inicio|date:"d/m/Y H:i" }}</a></span><span class="tag status-{{ a.status }}">{{ a.get_status_display }}</span></li>
+    {% empty %}<li class="suave">Nenhuma sessão marcada.</li>{% endfor %}
+    </ul>
+  </div>
+  <div>
+    <div class="card">
+      <h2>Pagamentos</h2>
+      <ul class="lista-limpa">
+      {% for l in lancamentos %}<li><span class="cresce">{{ l.data|date:"d/m/Y" }} · {{ l.forma|default:"—" }}{% if l.parcelas > 1 %} ({{ l.parcelas }}x){% endif %}</span><strong>{{ l.valor|dinheiro }}</strong></li>
+      {% empty %}<li class="suave">Nenhum pagamento registrado.</li>{% endfor %}
+      </ul>
+    </div>
+    {% if p.a_receber %}
+    <form method="post" class="card">{% csrf_token %}
+      <h2>Registrar pagamento</h2>
+      <div class="form-grid">
+        {% include "_campo.html" with campo=form.valor %}
+        {% include "_campo.html" with campo=form.forma %}
+        {% include "_campo.html" with campo=form.parcelas %}
+      </div>
+      <div class="botoes-form"><button class="btn" type="submit">Registrar</button></div>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% if p.observacoes %}<div class="card"><strong>Observações:</strong> {{ p.observacoes }}</div>{% endif %}
+{% endblock %}

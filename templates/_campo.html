@@ -1,0 +1,12 @@
+{% with w=campo.field.widget.input_type %}
+<div class="campo{% if w == 'checkbox' %} campo-check{% endif %}{% if campo.errors %} com-erro{% endif %}{% if largo %} largo{% endif %}">
+  {% if w == 'checkbox' %}
+    {{ campo }} <label for="{{ campo.id_for_label }}">{{ campo.label|capfirst }}</label>
+  {% else %}
+    <label for="{{ campo.id_for_label }}">{{ campo.label|capfirst }}{% if campo.field.required %} *{% endif %}</label>
+    {{ campo }}
+  {% endif %}
+  {% if campo.help_text %}<span class="ajuda">{{ campo.help_text }}</span>{% endif %}
+  {% for e in campo.errors %}<span class="erro">{{ e }}</span>{% endfor %}
+</div>
+{% endwith %}

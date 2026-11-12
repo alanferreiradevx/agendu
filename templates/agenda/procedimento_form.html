@@ -1,0 +1,41 @@
+{% extends "base.html" %}{% load agendu %}
+{% block titulo %}{% if proc %}{{ proc }}{% else %}Novo procedimento{% endif %}{% endblock %}
+{% block conteudo %}
+<p style="margin:0 0 8px"><a href="{% url 'agenda:procedimentos' %}">← Procedimentos</a></p>
+<h1>{% if proc %}{{ proc }}{% else %}Novo procedimento{% endif %}</h1>
+<form method="post" style="margin-top:14px;max-width:900px">{% csrf_token %}
+  {% if form.non_field_errors %}<div class="erros-gerais">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <div class="card">
+    <div class="form-grid">
+      {% include "_campo.html" with campo=form.nome %}
+      {% include "_campo.html" with campo=form.preco %}
+      {% include "_campo.html" with campo=form.duracao_min %}
+      {% include "_campo.html" with campo=form.retorno_dias %}
+      {% include "_campo.html" with campo=form.cor %}
+      {% include "_campo.html" with campo=form.ativo %}
+      {% include "_campo.html" with campo=form.descricao largo=True %}
+      {% include "_campo.html" with campo=form.cuidados_pos largo=True %}
+    </div>
+  </div>
+  <div class="card">
+    <h2><svg class="ico"><use href="#i-caixa"/></svg>Materiais gastos por sessão</h2>
+    <p class="suave" style="margin-top:0;font-size:.85rem">Saem do estoque sozinhos ao concluir o atendimento. Material novo? <a href="{% url 'estoque:novo' %}" target="_blank">Cadastre no estoque</a> e recarregue esta página.</p>
+    {{ materiais.management_form }}
+    {% if materiais.non_form_errors %}<div class="erros-gerais">{{ materiais.non_form_errors|join:" " }}</div>{% endif %}
+    <div class="tabela-wrap"><table>
+      <thead><tr><th>Material</th><th>Quantidade</th><th>Tirar</th></tr></thead>
+      <tbody>
+      {% for f in materiais %}
+        <tr>{{ f.id }}
+          <td>{{ f.material }}{% for e in f.material.errors %}<br><small class="negativo">{{ e }}</small>{% endfor %}</td>
+          <td style="max-width:140px">{{ f.quantidade }}{% for e in f.quantidade.errors %}<br><small class="negativo">{{ e }}</small>{% endfor %}</td>
+          <td>{% if f.instance.pk %}{{ f.DELETE }}{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% if proc %}<p style="margin-bottom:0">Custo atual em materiais: <strong>{{ proc.custo_material|dinheiro }}</strong></p>{% endif %}
+  </div>
+  <button class="btn" type="submit">Salvar procedimento</button>
+</form>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block titulo %}Antes e depois · {{ cliente }}{% endblock %}
+{% block conteudo %}
+<p style="margin:0 0 8px"><a href="{% url 'clientes:detalhe' cliente.pk %}?aba=fotos">← Fotos de {{ cliente }}</a></p>
+<h1>Antes e depois</h1>
+<p class="suave">{{ cliente }} · {{ dias }} dia(s) entre as fotos</p>
+<div class="card comparar">
+  {% for f in fotos %}
+  <figure>
+    <img src="{% url 'clientes:foto' f.pk %}" alt="{{ f.get_momento_display }} {{ f.data|date:'d/m/Y' }}">
+    <figcaption>{{ f.get_momento_display }} · {{ f.data|date:"d/m/Y" }}{% if f.regiao %} · {{ f.regiao }}{% endif %}{% if f.legenda %}<br><small>{{ f.legenda }}</small>{% endif %}</figcaption>
+  </figure>
+  {% endfor %}
+</div>
+{% endblock %}

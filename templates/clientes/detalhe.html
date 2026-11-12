@@ -1,0 +1,226 @@
+{% extends "base.html" %}{% load agendu %}
+{% block titulo %}{{ cliente }}{% endblock %}
+{% block conteudo %}
+<p style="margin:0 0 8px"><a href="{% url 'clientes:lista' %}">← Clientes</a></p>
+<div class="cabecalho">
+  <div style="display:flex;gap:14px;align-items:center">
+    <span class="avatar grande">{{ cliente.nome|slice:":1" }}</span>
+    <div>
+      <h1>{{ cliente }}{% if not cliente.ativo %} <span class="tag">inativa</span>{% endif %}</h1>
+      <p class="suave" style="margin:0">
+        {% if cliente.idade %}{{ cliente.idade }} anos · {% endif %}{{ total_visitas }} visita(s){% if ultima_visita %} · última em {{ ultima_visita.inicio|date:"d/m/Y" }}{% endif %}{% if cliente.faltas %} · <span class="negativo">{{ cliente.faltas }} falta(s)</span>{% endif %}
+      </p>
+    </div>
+  </div>
+  <div class="acoes">
+    {% if cliente.telefone %}<a class="btn btn-whats" href="{{ cliente.whatsapp }}" target="_blank" rel="noopener"><svg class="ico"><use href="#i-whats"/></svg>WhatsApp</a>{% endif %}
+    <a class="btn" href="{% url 'agenda:novo' %}?cliente={{ cliente.pk }}"><svg class="ico"><use href="#i-agenda"/></svg>Agendar</a>
+    <a class="btn btn-sec" href="{% url 'clientes:editar' cliente.pk %}">Editar</a>
+  </div>
+</div>
+
+{% with atencao=ficha.pontos_de_atencao %}{% if atencao %}
+<div class="card aviso-erro" style="padding:12px 16px"><strong><svg class="ico"><use href="#i-alerta"/></svg> Atenção:</strong> {{ atencao|join:" · " }}</div>
+{% endif %}{% endwith %}
+
+<nav class="abas">
+  {% for a in abas %}<a href="?aba={{ a }}"{% if a == aba %} class="ativo"{% endif %}>{% if a == "resumo" %}Resumo{% elif a == "ficha" %}Ficha{% elif a == "evolucao" %}Evolução{% elif a == "fotos" %}Fotos ({{ fotos|length }}){% elif a == "agenda" %}Atendimentos{% elif a == "pacotes" %}Pacotes{% else %}Financeiro{% endif %}</a>{% endfor %}
+</nav>
+
+{% if aba == "resumo" %}
+<div class="grid grid-2">
+  <div class="card">
+    <h2>Dados</h2>
+    <dl class="dl">
+      <dt>WhatsApp</dt><dd class="mono">{{ cliente.telefone|default:"—" }}</dd>
+      <dt>E-mail</dt><dd>{{ cliente.email|default:"—" }}</dd>
+      <dt>Nascimento</dt><dd>{{ cliente.nascimento|date:"d/m/Y"|default:"—" }}</dd>
+      <dt>CPF</dt><dd class="mono">{{ cliente.cpf|default:"—" }}</dd>
+      <dt>Profissão</dt><dd>{{ cliente.profissao|default:"—" }}</dd>
+      <dt>Endereço</dt><dd>{{ cliente.endereco_formatado|default:"—" }}</dd>
+      <dt>Como conheceu</dt><dd>{{ cliente.como_conheceu|default:"—" }}</dd>
+      <dt>Cliente desde</dt><dd>{{ cliente.criado_em|date:"d/m/Y" }}</dd>
+    </dl>
+    {% if cliente.observacoes %}<h3 style="margin-top:16px">Observações</h3><p style="white-space:pre-line;margin:0">{{ cliente.observacoes }}</p>{% endif %}
+    {% if cliente.nascimento and cliente.telefone %}
+      <p id="parabens" style="margin:16px 0 0"><a class="btn btn-whats btn-peq" href="{{ msg_aniversario }}" target="_blank" rel="noopener"><svg class="ico"><use href="#i-bolo"/></svg>Mandar parabéns</a></p>
+    {% endif %}
+  </div>
+  <div>
+    <div class="card">
+      <h2>Próximos horários</h2>
+      <ul class="lista-limpa">
+      {% for a in proximos %}
+        <li><span class="hora">{{ a.inicio|date:"d/m" }}</span><span class="cresce"><a href="{% url 'agenda:detalhe' a.pk %}">{{ a.procedimento }}</a><br><small>{{ a.inicio|date:"l" }}, {{ a.inicio|time:"H:i" }}</small></span><span class="tag status-{{ a.status }}">{{ a.get_status_display }}</span></li>
+      {% empty %}<li class="suave">Nenhum horário marcado.</li>{% endfor %}
+      </ul>
+    </div>
+    <div class="card">
+      <h2>Ficha</h2>
+      {% if ficha.queixa_principal %}<p style="margin-top:0"><strong>Objetivo:</strong> {{ ficha.queixa_principal }}</p>{% endif %}
+      <p class="suave" style="margin:0">{% if ficha.tipo_pele %}Pele {{ ficha.get_tipo_pele_display|lower }}{% endif %}{% if ficha.fototipo %} · fototipo {{ ficha.fototipo }}{% endif %}</p>
+      {% with c=ficha.condicoes_marcadas %}{% if c %}<p style="margin:8px 0 0">{% for x in c %}<span class="tag tag-roxo">{{ x }}</span> {% endfor %}</p>{% endif %}{% endwith %}
+      <p style="margin:12px 0 0"><a href="?aba=ficha">Abrir ficha completa</a> · <a href="{% url 'clientes:imprimir_ficha' cliente.pk %}">Imprimir ficha e termos</a></p>
+    </div>
+  </div>
+</div>
+
+{% elif aba == "ficha" %}
+<form method="post" action="{% url 'clientes:salvar_ficha' cliente.pk %}" class="card">{% csrf_token %}
+  <div class="cabecalho" style="margin-bottom:10px">
+    <div><h2 style="margin:0">Ficha de anamnese</h2><small>Atualizada em {{ ficha.atualizada_em|date:"d/m/Y H:i" }}</small></div>
+    <a class="btn btn-sec" href="{% url 'clientes:imprimir_ficha' cliente.pk %}"><svg class="ico"><use href="#i-imprimir"/></svg>Imprimir com termos</a>
+  </div>
+  <fieldset><legend>Objetivo</legend><div class="form-grid">
+    {% include "_campo.html" with campo=form_ficha.queixa_principal largo=True %}
+    {% include "_campo.html" with campo=form_ficha.tipo_pele %}
+    {% include "_campo.html" with campo=form_ficha.fototipo %}
+  </div></fieldset>
+  <fieldset><legend>Saúde e hábitos</legend><div class="checks">
+    {% include "_campo.html" with campo=form_ficha.gestante_lactante %}
+    {% include "_campo.html" with campo=form_ficha.diabetes %}
+    {% include "_campo.html" with campo=form_ficha.hipertensao %}
+    {% include "_campo.html" with campo=form_ficha.cardiaco %}
+    {% include "_campo.html" with campo=form_ficha.marcapasso_metal %}
+    {% include "_campo.html" with campo=form_ficha.epilepsia %}
+    {% include "_campo.html" with campo=form_ficha.coagulacao %}
+    {% include "_campo.html" with campo=form_ficha.queloide %}
+    {% include "_campo.html" with campo=form_ficha.herpes %}
+    {% include "_campo.html" with campo=form_ficha.cancer %}
+    {% include "_campo.html" with campo=form_ficha.fumante %}
+    {% include "_campo.html" with campo=form_ficha.acidos_retinoides %}
+    {% include "_campo.html" with campo=form_ficha.exposicao_solar %}
+    {% include "_campo.html" with campo=form_ficha.usa_protetor %}
+  </div></fieldset>
+  <fieldset><legend>Detalhes</legend><div class="form-grid">
+    {% include "_campo.html" with campo=form_ficha.alergias %}
+    {% include "_campo.html" with campo=form_ficha.medicamentos %}
+    {% include "_campo.html" with campo=form_ficha.cirurgias %}
+    {% include "_campo.html" with campo=form_ficha.procedimentos_anteriores %}
+    {% include "_campo.html" with campo=form_ficha.rotina_cuidados %}
+    {% include "_campo.html" with campo=form_ficha.observacoes %}
+  </div></fieldset>
+  <button class="btn" type="submit">Salvar ficha</button>
+</form>
+
+{% elif aba == "evolucao" %}
+<div class="grid grid-2">
+  <div class="card">
+    <h2>Linha do tempo</h2>
+    <div class="linha-tempo">
+    {% for e in evolucoes %}
+      <div class="marco">
+        <strong>{{ e.data|date:"d/m/Y" }}</strong>{% if e.agendamento %} · <a href="{% url 'agenda:detalhe' e.agendamento.pk %}">{{ e.agendamento.procedimento }}</a>{% endif %}
+        <p style="margin:4px 0;white-space:pre-line">{{ e.texto }}</p>
+        {% if e.medidas %}<small>Medidas: {{ e.medidas }}</small>{% endif %}
+        {% if e.fotos.all %}<div class="miniaturas">{% for f in e.fotos.all %}<a href="{% url 'clientes:foto' f.pk %}" target="_blank"><img src="{% url 'clientes:foto_mini' f.pk %}" alt="{{ f.get_momento_display }}" loading="lazy"></a>{% endfor %}</div>{% endif %}
+        <form method="post" action="{% url 'clientes:apagar_evolucao' e.pk %}" class="inline" onsubmit="return confirm('Apagar este registro? As fotos continuam na galeria.')">{% csrf_token %}<button class="btn-icone" type="submit" title="Apagar"><svg class="ico"><use href="#i-x"/></svg></button></form>
+      </div>
+    {% empty %}
+      <p class="suave">Nenhum registro ainda. Ao concluir um atendimento você já pode escrever a evolução e mandar fotos.</p>
+    {% endfor %}
+    </div>
+  </div>
+  <form method="post" action="{% url 'clientes:nova_evolucao' cliente.pk %}" enctype="multipart/form-data" class="card">{% csrf_token %}
+    <h2>Novo registro</h2>
+    <div class="form-grid">
+      {% include "_campo.html" with campo=form_evolucao.data %}
+      {% include "_campo.html" with campo=form_evolucao.medidas %}
+      {% include "_campo.html" with campo=form_evolucao.texto largo=True %}
+      {% include "_campo.html" with campo=form_evolucao.fotos %}
+      {% include "_campo.html" with campo=form_evolucao.momento %}
+    </div>
+    <div class="botoes-form"><button class="btn" type="submit">Salvar registro</button></div>
+  </form>
+</div>
+
+{% elif aba == "fotos" %}
+<form method="post" action="{% url 'clientes:enviar_fotos' cliente.pk %}" enctype="multipart/form-data" class="card">{% csrf_token %}
+  <h2><svg class="ico"><use href="#i-camera"/></svg>Enviar fotos</h2>
+  <div class="form-grid">
+    {% include "_campo.html" with campo=form_fotos.fotos %}
+    {% include "_campo.html" with campo=form_fotos.momento %}
+    {% include "_campo.html" with campo=form_fotos.regiao %}
+    {% include "_campo.html" with campo=form_fotos.data %}
+    {% include "_campo.html" with campo=form_fotos.legenda %}
+  </div>
+  <div class="botoes-form"><button class="btn" type="submit">Enviar</button></div>
+  <p class="suave" style="margin:10px 0 0;font-size:.82rem">As fotos ficam privadas: só abrem com login. No celular, o botão abre a câmera.</p>
+</form>
+<form method="get" action="{% url 'clientes:comparar' cliente.pk %}" class="card">
+  <div class="cabecalho" style="margin-bottom:12px;align-items:center">
+    <h2 style="margin:0">Galeria</h2>
+    <button class="btn btn-sec" id="btn-comparar" type="submit" disabled>Comparar antes e depois</button>
+  </div>
+  <p class="suave" style="margin-top:0;font-size:.85rem">Marque duas fotos para ver lado a lado.</p>
+  <div class="galeria">
+  {% for f in fotos %}
+    <div class="foto">
+      <a href="{% url 'clientes:foto' f.pk %}" target="_blank"><img src="{% url 'clientes:foto_mini' f.pk %}" alt="{{ f.get_momento_display }}" loading="lazy"></a>
+      <label class="marcar"><input type="checkbox" name="f" value="{{ f.pk }}" aria-label="Marcar para comparar"></label>
+      <div class="legenda">{{ f.get_momento_display }} · {{ f.data|date:"d/m/y" }}{% if f.regiao %} · {{ f.regiao }}{% endif %}</div>
+    </div>
+  {% empty %}
+    <p class="suave">Nenhuma foto ainda.</p>
+  {% endfor %}
+  </div>
+</form>
+{% if fotos %}
+<details class="card"><summary style="cursor:pointer;font-weight:700">Apagar fotos</summary>
+  <div class="galeria" style="margin-top:12px">
+  {% for f in fotos %}
+    <form method="post" action="{% url 'clientes:apagar_foto' f.pk %}" class="foto" onsubmit="return confirm('Apagar esta foto para sempre?')">{% csrf_token %}
+      <img src="{% url 'clientes:foto_mini' f.pk %}" alt="" loading="lazy">
+      <div class="legenda"><button class="btn btn-perigo btn-peq" type="submit">Apagar</button></div>
+    </form>
+  {% endfor %}
+  </div>
+</details>
+{% endif %}
+
+{% elif aba == "agenda" %}
+<div class="card" style="padding:8px 14px">
+  <div class="tabela-wrap"><table>
+    <thead><tr><th>Data</th><th>Procedimento</th><th>Situação</th><th class="num">Valor</th></tr></thead>
+    <tbody>
+    {% for a in agendamentos %}
+      <tr><td><a href="{% url 'agenda:detalhe' a.pk %}">{{ a.inicio|date:"d/m/Y H:i" }}</a></td><td>{{ a.procedimento }}{% if a.pacote %} <span class="tag tag-roxo">pacote</span>{% endif %}</td>
+        <td><span class="tag status-{{ a.status }}">{{ a.get_status_display }}</span></td><td class="num">{% if a.pacote %}—{% else %}{{ a.valor|dinheiro }}{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="4" class="vazio">Nenhum atendimento.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</div>
+
+{% elif aba == "pacotes" %}
+<div class="acoes" style="margin-bottom:14px"><a class="btn" href="{% url 'agenda:pacote_novo' %}?cliente={{ cliente.pk }}"><svg class="ico"><use href="#i-pacote"/></svg>Vender pacote</a></div>
+<div class="card" style="padding:8px 14px">
+  <div class="tabela-wrap"><table>
+    <thead><tr><th>Pacote</th><th>Sessões</th><th class="num">Valor</th><th class="num">A receber</th></tr></thead>
+    <tbody>
+    {% for p in pacotes %}
+      <tr><td><a href="{% url 'agenda:pacote' p.pk %}">{{ p.sessoes }}x {{ p.procedimento }}</a><br><small>comprado em {{ p.data_compra|date:"d/m/Y" }}</small></td>
+        <td>{{ p.usadas }} de {{ p.sessoes }}{% if p.restantes %} · <strong>{{ p.restantes }} restante(s)</strong>{% else %} <span class="tag tag-ok">concluído</span>{% endif %}</td>
+        <td class="num">{{ p.valor|dinheiro }}</td><td class="num">{% if p.a_receber %}<span class="negativo">{{ p.a_receber|dinheiro }}</span>{% else %}—{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="4" class="vazio">Nenhum pacote.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</div>
+
+{% else %}
+<div class="grid grid-3" style="margin-bottom:18px">
+  <div class="card kpi"><div class="rotulo">Total pago</div><div class="valor">{{ financeiro.entradas|dinheiro }}</div></div>
+  <div class="card kpi"><div class="rotulo">Visitas</div><div class="valor">{{ total_visitas }}</div></div>
+  <div class="card kpi"><div class="rotulo">Média por visita</div><div class="valor">{% if total_visitas %}{{ media_visita|dinheiro }}{% else %}—{% endif %}</div></div>
+</div>
+<div class="card" style="padding:8px 14px">
+  <div class="tabela-wrap"><table>
+    <thead><tr><th>Data</th><th>Descrição</th><th>Forma</th><th class="num">Valor</th></tr></thead>
+    <tbody>
+    {% for l in lancamentos %}
+      <tr><td>{{ l.data|date:"d/m/Y" }}</td><td>{{ l.descricao }}</td><td>{{ l.forma|default:"—" }}{% if l.parcelas > 1 %} ({{ l.parcelas }}x){% endif %}</td><td class="num">{{ l.valor|dinheiro }}</td></tr>
+    {% empty %}<tr><td colspan="4" class="vazio">Nenhum pagamento registrado.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</div>
+{% endif %}
+{% endblock %}

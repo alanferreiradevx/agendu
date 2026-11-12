@@ -1,0 +1,111 @@
+{% extends "base.html" %}{% load agendu %}
+{% block titulo %}Painel{% endblock %}
+{% block conteudo %}
+<div class="cabecalho">
+  <div>
+    <h1>Olá{% if estudio.profissional %}, {{ estudio.profissional }}{% endif %}!</h1>
+    <p class="suave" style="margin:0">{{ hoje|date:"l, d \d\e F" }} · {{ de_hoje|length }} atendimento(s) hoje</p>
+  </div>
+  <div class="acoes">
+    <a class="btn" href="{% url 'agenda:novo' %}"><svg class="ico"><use href="#i-mais"/></svg>Agendar</a>
+    <a class="btn btn-sec" href="{% url 'clientes:nova' %}"><svg class="ico"><use href="#i-clientes"/></svg>Nova cliente</a>
+  </div>
+</div>
+
+<div class="grid grid-4" style="margin-bottom:18px">
+  <div class="card kpi destaque"><div class="rotulo">Faturado no mês</div><div class="valor">{{ mes.entradas|dinheiro }}</div><small>{{ concluidos_mes }} atendimento(s)</small></div>
+  <div class="card kpi"><div class="rotulo">Despesas no mês</div><div class="valor">{{ mes.saidas|dinheiro }}</div><small>+ {{ mes.taxas|dinheiro }} de taxas</small></div>
+  <div class="card kpi"><div class="rotulo">Lucro no mês</div><div class="valor {% if mes.lucro < 0 %}negativo{% else %}positivo{% endif %}">{{ mes.lucro|dinheiro }}</div><small>entradas − taxas − despesas</small></div>
+  <div class="card kpi"><div class="rotulo">Ticket médio</div><div class="valor">{{ ticket_medio|dinheiro }}</div><small>{{ faltas_mes }} falta(s) no mês</small></div>
+</div>
+
+<div class="grid grid-2">
+  <div>
+    <div class="card">
+      <h2><svg class="ico"><use href="#i-agenda"/></svg>Hoje</h2>
+      <ul class="lista-limpa">
+      {% for a in de_hoje %}
+        <li>
+          <span class="hora">{{ a.inicio|time:"H:i" }}</span>
+          <span class="bolinha" style="--cor:{{ a.procedimento.cor }}"></span>
+          <span class="cresce"><a href="{% url 'agenda:detalhe' a.pk %}">{{ a.cliente }}</a><br><small>{{ a.procedimento }}</small></span>
+          <span class="tag status-{{ a.status }}">{{ a.get_status_display }}</span>
+        </li>
+      {% empty %}
+        <li class="suave">Nenhum atendimento hoje. <a href="{% url 'agenda:novo' %}">Agendar</a></li>
+      {% endfor %}
+      </ul>
+    </div>
+
+    {% if pendentes %}
+    <div class="card aviso">
+      <h2><svg class="ico"><use href="#i-alerta"/></svg>Atendimentos sem fechamento</h2>
+      <p class="suave" style="margin-top:0">Já passaram e ainda estão em aberto. Conclua (baixa estoque e lança no caixa) ou marque a falta.</p>
+      <ul class="lista-limpa">
+      {% for a in pendentes %}
+        <li><span class="hora">{{ a.inicio|date:"d/m" }}</span><span class="cresce"><a href="{% url 'agenda:detalhe' a.pk %}">{{ a.cliente }}</a> · <small>{{ a.procedimento }}</small></span>
+          <a class="btn btn-ok btn-peq" href="{% url 'agenda:concluir' a.pk %}">Concluir</a></li>
+      {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <h2>Amanhã <small class="suave" style="font-weight:600">lembrete com 1 clique</small></h2>
+      <ul class="lista-limpa">
+      {% for a in amanha %}
+        <li>
+          <span class="hora">{{ a.inicio|time:"H:i" }}</span>
+          <span class="cresce"><a href="{% url 'agenda:detalhe' a.pk %}">{{ a.cliente }}</a><br><small>{{ a.procedimento }}</small></span>
+          {% if a.status == "confirmado" %}<span class="tag status-confirmado">Confirmado</span>{% else %}<a class="btn btn-whats btn-peq" href="{% url 'agenda:detalhe' a.pk %}#lembrete"><svg class="ico"><use href="#i-whats"/></svg>Lembrar</a>{% endif %}
+        </li>
+      {% empty %}
+        <li class="suave">Nada marcado para amanhã.</li>
+      {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div>
+    {% if alerta_estoque %}
+    <div class="card aviso">
+      <h2><svg class="ico"><use href="#i-caixa"/></svg>Estoque</h2>
+      <ul class="lista-limpa">
+      {% for m in alerta_estoque %}
+        <li><span class="cresce"><a href="{% url 'estoque:detalhe' m.pk %}">{{ m }}</a><br><small>{{ m.quantidade|numero }} {{ m.get_unidade_display }} em estoque</small></span>
+          {% if m.vencido %}<span class="tag tag-erro">vencido</span>{% elif m.vencendo %}<span class="tag tag-alerta">vence {{ m.validade|date:"d/m" }}</span>{% endif %}
+          {% if m.abaixo_do_minimo %}<span class="tag tag-alerta">comprar</span>{% endif %}</li>
+      {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <h2><svg class="ico"><use href="#i-retorno"/></svg>Hora do retorno</h2>
+      <ul class="lista-limpa">
+      {% for r in retornos %}
+        <li>
+          <span class="cresce"><a href="{% url 'clientes:detalhe' r.cliente.pk %}">{{ r.cliente }}</a><br>
+            <small>{{ r.procedimento }} · {% if r.atrasado %}<span class="negativo">desde {{ r.data|date:"d/m" }}</span>{% else %}{{ r.data|date:"d/m" }}{% endif %}</small></span>
+          <a class="btn btn-sec btn-peq" href="{% url 'agenda:novo' %}?cliente={{ r.cliente.pk }}&procedimento={{ r.procedimento.pk }}">Agendar</a>
+        </li>
+      {% empty %}
+        <li class="suave">Ninguém para chamar agora. O retorno é configurado em cada procedimento.</li>
+      {% endfor %}
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2><svg class="ico"><use href="#i-bolo"/></svg>Aniversariantes do mês</h2>
+      <ul class="lista-limpa">
+      {% for c in aniversariantes %}
+        <li><span class="hora">{{ c.nascimento|date:"d/m" }}</span><span class="cresce"><a href="{% url 'clientes:detalhe' c.pk %}">{{ c }}</a></span>
+          {% if c.telefone %}<a class="btn btn-whats btn-peq" href="{% url 'clientes:detalhe' c.pk %}#parabens"><svg class="ico"><use href="#i-whats"/></svg>Parabéns</a>{% endif %}</li>
+      {% empty %}
+        <li class="suave">Nenhum aniversário até o fim do mês.</li>
+      {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

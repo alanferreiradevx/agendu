@@ -1,0 +1,59 @@
+{% extends "base.html" %}{% load agendu %}
+{% block titulo %}Caixa{% endblock %}
+{% block conteudo %}
+<div class="cabecalho">
+  <div>
+    <h1>Caixa</h1>
+    <div class="acoes" style="margin-top:4px">
+      <a class="btn-icone" href="?mes={{ mes_anterior }}" aria-label="Mês anterior"><svg class="ico"><use href="#i-seta-e"/></svg></a>
+      <strong style="text-transform:capitalize">{{ nome_mes }}</strong>
+      <a class="btn-icone" href="?mes={{ mes_proximo }}" aria-label="Próximo mês"><svg class="ico"><use href="#i-seta-d"/></svg></a>
+    </div>
+  </div>
+  <div class="acoes">
+    <a class="btn btn-ok" href="{% url 'financeiro:novo' 'entrada' %}"><svg class="ico"><use href="#i-mais"/></svg>Entrada</a>
+    <a class="btn btn-perigo" href="{% url 'financeiro:novo' 'saida' %}"><svg class="ico"><use href="#i-mais"/></svg>Despesa</a>
+    <a class="btn btn-sec" href="?mes={{ mes_codigo }}&csv=1{% if tipo %}&tipo={{ tipo }}{% endif %}">Excel</a>
+  </div>
+</div>
+
+<div class="grid grid-4" style="margin-bottom:18px">
+  <div class="card kpi"><div class="rotulo">Entrou</div><div class="valor positivo">{{ r.entradas|dinheiro }}</div></div>
+  <div class="card kpi"><div class="rotulo">Taxas da maquininha</div><div class="valor">{{ r.taxas|dinheiro }}</div></div>
+  <div class="card kpi"><div class="rotulo">Saiu (despesas)</div><div class="valor negativo">{{ r.saidas|dinheiro }}</div></div>
+  <div class="card kpi destaque"><div class="rotulo">Lucro do mês</div><div class="valor">{{ r.lucro|dinheiro }}</div></div>
+</div>
+
+<div class="grid grid-caixa">
+  <div class="card" style="padding:8px 14px">
+    <nav class="abas" style="margin-bottom:6px">
+      <a href="?mes={{ mes_codigo }}"{% if not tipo %} class="ativo"{% endif %}>Tudo</a>
+      <a href="?mes={{ mes_codigo }}&tipo=entrada"{% if tipo == "entrada" %} class="ativo"{% endif %}>Entradas</a>
+      <a href="?mes={{ mes_codigo }}&tipo=saida"{% if tipo == "saida" %} class="ativo"{% endif %}>Despesas</a>
+    </nav>
+    <div class="tabela-wrap"><table>
+      <thead><tr><th>Data</th><th>Descrição</th><th class="so-tela-grande">Forma</th><th class="num">Valor</th></tr></thead>
+      <tbody>
+      {% for l in lancamentos %}
+        <tr>
+          <td>{{ l.data|date:"d/m" }}</td>
+          <td><a href="{% if l.agendamento_id and l.categoria == 'atendimento' %}{% url 'agenda:detalhe' l.agendamento_id %}{% else %}{% url 'financeiro:editar' l.pk %}{% endif %}">{{ l.descricao }}</a><br><small>{{ l.get_categoria_display }}</small></td>
+          <td class="so-tela-grande">{{ l.forma|default:"—" }}{% if l.parcelas > 1 %} ({{ l.parcelas }}x){% endif %}{% if l.taxa %}<br><small>taxa {{ l.taxa|dinheiro }}</small>{% endif %}</td>
+          <td class="num {% if l.tipo == 'entrada' %}positivo{% else %}negativo{% endif %}">{% if l.tipo == "saida" %}−{% endif %}{{ l.valor|dinheiro }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4" class="vazio">Nada lançado neste mês.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+  <div class="card">
+    <h2>Despesas por tipo</h2>
+    <ul class="lista-limpa">
+    {% for nome, valor in despesas_por_categoria %}<li><span class="cresce">{{ nome }}</span><strong>{{ valor|dinheiro }}</strong></li>
+    {% empty %}<li class="suave">Nenhuma despesa.</li>{% endfor %}
+    </ul>
+    <p style="margin-bottom:0"><a href="{% url 'financeiro:faturamento' %}?mes={{ mes_codigo }}">Ver faturamento por procedimento →</a></p>
+  </div>
+</div>
+{% endblock %}

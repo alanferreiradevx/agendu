@@ -1,0 +1,95 @@
+{% extends "base.html" %}{% load agendu %}
+{% block titulo %}{{ ag.cliente }} · {{ ag.inicio|date:"d/m H:i" }}{% endblock %}
+{% block conteudo %}
+<p style="margin:0 0 8px"><a href="{% url 'agenda:semana' %}?data={{ ag.inicio|date:'Y-m-d' }}">← Agenda</a></p>
+<div class="cabecalho">
+  <div>
+    <h1><a href="{% url 'clientes:detalhe' ag.cliente.pk %}">{{ ag.cliente }}</a></h1>
+    <p class="suave" style="margin:0">
+      <span class="bolinha" style="--cor:{{ ag.procedimento.cor }};display:inline-block"></span> {{ ag.procedimento }} ·
+      {{ ag.inicio|date:"l, d/m/Y" }} das {{ ag.inicio|time:"H:i" }} às {{ ag.fim|time:"H:i" }}
+      · <span class="tag status-{{ ag.status }}">{{ ag.get_status_display }}</span>
+      {% if ag.pacote %} · <a class="tag tag-roxo" href="{% url 'agenda:pacote' ag.pacote.pk %}">pacote</a>{% endif %}
+    </p>
+  </div>
+  <div class="acoes">
+    {% if ag.em_aberto or ag.status == "faltou" %}
+      <a class="btn btn-ok" href="{% url 'agenda:concluir' ag.pk %}"><svg class="ico"><use href="#i-check"/></svg>Concluir atendimento</a>
+    {% endif %}
+    {% if ag.status != "concluido" %}<a class="btn btn-sec" href="{% url 'agenda:editar' ag.pk %}">Editar</a>{% endif %}
+  </div>
+</div>
+
+{% if atencao %}
+<div class="card aviso-erro" style="padding:12px 16px"><strong><svg class="ico"><use href="#i-alerta"/></svg> Ficha:</strong> {{ atencao|join:" · " }}</div>
+{% endif %}
+
+<div class="grid grid-2">
+  <div>
+    <div class="card" id="lembrete">
+      <h2><svg class="ico"><use href="#i-whats"/></svg>WhatsApp</h2>
+      {% if ag.cliente.telefone %}
+        <div class="acoes">
+          {% if ag.em_aberto %}<a class="btn btn-whats" href="{{ whatsapp_lembrete }}" target="_blank" rel="noopener">Mandar lembrete</a>{% endif %}
+          {% if whatsapp_cuidados %}<a class="btn btn-sec" href="{{ whatsapp_cuidados }}" target="_blank" rel="noopener">Mandar cuidados pós</a>{% endif %}
+          <a class="btn btn-sec" href="{{ ag.cliente.whatsapp }}" target="_blank" rel="noopener">Abrir conversa</a>
+        </div>
+        <p class="suave" style="font-size:.82rem;margin-bottom:0">Abre o WhatsApp com a mensagem pronta; você confere e envia. Edite o texto em Configurações.</p>
+      {% else %}
+        <p class="suave" style="margin:0">Cliente sem telefone. <a href="{% url 'clientes:editar' ag.cliente.pk %}">Cadastrar</a></p>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <h2>Detalhes</h2>
+      <dl class="dl">
+        <dt>Valor</dt><dd>{% if ag.pacote %}sessão do pacote ({{ ag.pacote.valor_sessao|dinheiro }}){% else %}{{ ag.valor|dinheiro }}{% endif %}</dd>
+        <dt>Duração</dt><dd>{{ ag.duracao_min }} min</dd>
+        {% if ag.status == "concluido" %}
+          <dt>Materiais</dt><dd>{{ ag.custo_material|dinheiro }}</dd>
+          <dt>Sobrou</dt><dd><strong>{{ ag.margem|dinheiro }}</strong> <small>(valor − taxa − materiais)</small></dd>
+        {% endif %}
+        {% if ag.observacoes %}<dt>Observações</dt><dd style="white-space:pre-line">{{ ag.observacoes }}</dd>{% endif %}
+      </dl>
+    </div>
+
+    {% if ag.em_aberto %}
+    <div class="card">
+      <h2>Situação</h2>
+      <div class="acoes">
+        {% if ag.status == "agendado" %}<form method="post" action="{% url 'agenda:status' ag.pk 'confirmado' %}" class="inline">{% csrf_token %}<button class="btn btn-sec" type="submit">Cliente confirmou</button></form>{% endif %}
+        <form method="post" action="{% url 'agenda:status' ag.pk 'faltou' %}" class="inline">{% csrf_token %}<button class="btn btn-sec" type="submit">Faltou</button></form>
+        <form method="post" action="{% url 'agenda:status' ag.pk 'cancelado' %}" class="inline" onsubmit="return confirm('Cancelar este horário?')">{% csrf_token %}<button class="btn btn-perigo" type="submit">Cancelar</button></form>
+      </div>
+    </div>
+    {% elif ag.status == "faltou" or ag.status == "cancelado" %}
+    <div class="card">
+      <form method="post" action="{% url 'agenda:status' ag.pk 'agendado' %}" class="inline">{% csrf_token %}<button class="btn btn-sec" type="submit">Voltar para agendado</button></form>
+      <form method="post" action="{% url 'agenda:apagar' ag.pk %}" class="inline" onsubmit="return confirm('Apagar este agendamento de vez?')">{% csrf_token %}<button class="btn btn-perigo" type="submit">Apagar</button></form>
+    </div>
+    {% endif %}
+  </div>
+
+  <div>
+    <div class="card">
+      <h2><svg class="ico"><use href="#i-caixa"/></svg>Materiais</h2>
+      {% if ag.status == "concluido" %}
+        <ul class="lista-limpa">{% for m in movimentos %}<li><span class="cresce">{{ m.material }}</span><span>{{ m.quantidade|numero }} {{ m.material.unidade }}</span>{% if m.tipo == "estorno" %}<span class="tag">estorno</span>{% endif %}</li>{% empty %}<li class="suave">Nenhum material lançado.</li>{% endfor %}</ul>
+      {% else %}
+        <p class="suave" style="margin-top:0;font-size:.85rem">Saem do estoque quando você concluir:</p>
+        <ul class="lista-limpa">{% for m in materiais %}<li><span class="cresce">{{ m.material }}</span><span>{{ m.quantidade|numero }} {{ m.material.unidade }}</span>{% if m.material.quantidade < m.quantidade %}<span class="tag tag-erro">falta</span>{% endif %}</li>{% empty %}<li class="suave">Este procedimento não tem materiais cadastrados. <a href="{% url 'agenda:procedimento_editar' ag.procedimento.pk %}">Cadastrar</a></li>{% endfor %}</ul>
+      {% endif %}
+    </div>
+
+    {% if ag.status == "concluido" %}
+    <div class="card">
+      <h2><svg class="ico"><use href="#i-dinheiro"/></svg>Pagamento</h2>
+      <ul class="lista-limpa">{% for l in lancamentos %}<li><span class="cresce">{{ l.forma|default:"—" }}{% if l.parcelas > 1 %} ({{ l.parcelas }}x){% endif %}<br><small>taxa {{ l.taxa|dinheiro }}</small></span><strong>{{ l.valor|dinheiro }}</strong></li>{% empty %}<li class="suave">{% if ag.pacote %}Pago no pacote.{% else %}Sem pagamento registrado.{% endif %}</li>{% endfor %}</ul>
+      <form method="post" action="{% url 'agenda:desfazer' ag.pk %}" style="margin-top:12px" onsubmit="return confirm('Desfazer a conclusão? Os materiais voltam ao estoque e a entrada sai do caixa.')">{% csrf_token %}
+        <button class="btn btn-perigo btn-peq" type="submit">Desfazer conclusão</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

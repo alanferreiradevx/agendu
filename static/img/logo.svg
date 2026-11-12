@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 64">
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="#3d2352"/>
+  <rect x="15" y="17" width="34" height="31" rx="7" fill="none" stroke="#f6e9e4" stroke-width="4"/>
+  <path d="M15 27h34" stroke="#f6e9e4" stroke-width="4"/>
+  <path d="M24 12v9M40 12v9" stroke="#f6e9e4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M38.5 31.5l1.6 3.9 3.9 1.6-3.9 1.6-1.6 3.9-1.6-3.9-3.9-1.6 3.9-1.6z" fill="#e2a48c"/>
+  <text x="76" y="43" font-family="Manrope, 'Segoe UI', Arial, sans-serif" font-size="34" font-weight="800" letter-spacing="-1" fill="#3d2352">agendu</text>
+</svg>

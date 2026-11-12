@@ -1,0 +1,31 @@
+{% extends "base.html" %}{% load agendu %}
+{% block titulo %}Procedimentos{% endblock %}
+{% block conteudo %}
+<div class="cabecalho">
+  <div><h1>Procedimentos</h1><p class="suave" style="margin:0">Preço, duração, retorno e o material que cada um gasta (baixa automática no estoque).</p></div>
+  <a class="btn" href="{% url 'agenda:procedimento_novo' %}"><svg class="ico"><use href="#i-mais"/></svg>Novo procedimento</a>
+</div>
+<div class="card" style="padding:8px 14px">
+  <div class="tabela-wrap"><table>
+    <thead><tr><th>Procedimento</th><th>Duração</th><th>Retorno</th><th class="num">Preço</th><th class="num">Material</th><th class="num">Sobra</th></tr></thead>
+    <tbody>
+    {% for p in procedimentos %}
+      {% with custo=p.custo_material %}
+      <tr>
+        <td><span class="bolinha" style="--cor:{{ p.cor }};display:inline-block"></span> <a href="{% url 'agenda:procedimento_editar' p.pk %}">{{ p }}</a>{% if not p.ativo %} <span class="tag">inativo</span>{% endif %}
+          <br><small>{% for m in p.materiais.all %}{{ m.material }} {{ m.quantidade|numero }} {{ m.material.unidade }}{% if not forloop.last %} · {% endif %}{% empty %}sem materiais{% endfor %}</small></td>
+        <td>{{ p.duracao_min }} min</td>
+        <td>{% if p.retorno_dias %}{{ p.retorno_dias }} dias{% else %}—{% endif %}</td>
+        <td class="num">{{ p.preco|dinheiro }}</td>
+        <td class="num">{{ custo|dinheiro }}</td>
+        <td class="num"><strong>{{ p.margem|dinheiro }}</strong></td>
+      </tr>
+      {% endwith %}
+    {% empty %}
+      <tr><td colspan="6" class="vazio">Nenhum procedimento. <a href="{% url 'agenda:procedimento_novo' %}">Cadastre o primeiro</a> (ex.: limpeza de pele, drenagem, peeling).</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+<p class="suave" style="font-size:.82rem">"Sobra" = preço − custo dos materiais (antes da taxa do cartão). O custo vem do estoque.</p>
+{% endblock %}

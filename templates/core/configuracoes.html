@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block titulo %}Configurações{% endblock %}
+{% block conteudo %}
+<h1>Configurações</h1>
+<p class="suave">Dados do seu espaço (saem na ficha e nos termos), horário, mensagens do WhatsApp e taxas da maquininha.</p>
+
+<form method="post" enctype="multipart/form-data">{% csrf_token %}
+  {% if form.non_field_errors %}<div class="erros-gerais">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <div class="card">
+    <fieldset>
+      <legend>Seu espaço</legend>
+      <div class="form-grid">
+        {% include "_campo.html" with campo=form.nome %}
+        {% include "_campo.html" with campo=form.profissional %}
+        {% include "_campo.html" with campo=form.registro %}
+        {% include "_campo.html" with campo=form.documento %}
+        {% include "_campo.html" with campo=form.telefone %}
+        {% include "_campo.html" with campo=form.instagram %}
+        {% include "_campo.html" with campo=form.endereco largo=True %}
+        <div class="campo">
+          <label for="{{ form.logo.id_for_label }}">Logo</label>
+          {% if form.instance.logo %}<img src="{% url 'logo' %}" alt="Logo atual" style="max-height:70px;max-width:180px;object-fit:contain;border:1px solid var(--borda);border-radius:10px;padding:6px;background:#fff">{% endif %}
+          <input type="file" name="{{ form.logo.html_name }}" id="{{ form.logo.id_for_label }}" accept="image/*">
+          <span class="ajuda">Sai no topo da ficha e dos termos.</span>
+        </div>
+        {% include "_campo.html" with campo=form.hora_abre %}
+        {% include "_campo.html" with campo=form.hora_fecha %}
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Mensagens do WhatsApp</legend>
+      <div class="form-grid">
+        {% include "_campo.html" with campo=form.msg_lembrete largo=True %}
+        {% include "_campo.html" with campo=form.msg_retorno largo=True %}
+        {% include "_campo.html" with campo=form.msg_aniversario largo=True %}
+      </div>
+    </fieldset>
+  </div>
+
+  <div class="card">
+    <h2>Formas de pagamento e taxas</h2>
+    <p class="suave" style="margin-top:0">A taxa é descontada das entradas para mostrar o que sobra de verdade. Coloque as taxas da sua maquininha.</p>
+    {{ formas.management_form }}
+    {% if formas.non_form_errors %}<div class="erros-gerais">{{ formas.non_form_errors|join:" " }}</div>{% endif %}
+    <div class="tabela-wrap">
+      <table>
+        <thead><tr><th>Forma</th><th>Taxa (%)</th><th>Ordem</th><th>Ativa</th></tr></thead>
+        <tbody>
+        {% for f in formas %}
+          <tr>{{ f.id }}
+            <td>{{ f.nome }}{% for e in f.nome.errors %}<br><small class="negativo">{{ e }}</small>{% endfor %}</td>
+            <td style="max-width:120px">{{ f.taxa_percentual }}</td>
+            <td style="max-width:90px">{{ f.ordem }}</td>
+            <td>{{ f.ativo }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <button class="btn" type="submit">Salvar configurações</button>
+</form>
+{% endblock %}

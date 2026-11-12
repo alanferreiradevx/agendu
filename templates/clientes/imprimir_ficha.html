@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block titulo %}Ficha · {{ cliente }}{% endblock %}
+{% block conteudo %}
+<div class="cabecalho nao-imprimir">
+  <a href="{% url 'clientes:detalhe' cliente.pk %}?aba=ficha">← Voltar à ficha</a>
+  <button class="btn" type="button" onclick="window.print()"><svg class="ico"><use href="#i-imprimir"/></svg>Imprimir / salvar PDF</button>
+</div>
+
+{% with e=estudio %}
+<div class="documento">
+  <div class="doc-topo">
+    <div>{% if e.logo %}<img src="{% url 'logo' %}" alt="{{ e.nome }}">{% else %}<span class="doc-nome">{{ e.nome }}</span>{% endif %}</div>
+    <div class="doc-dados">
+      {% if e.logo %}<strong>{{ e.nome }}</strong><br>{% endif %}
+      {% if e.profissional %}{{ e.profissional }}{% if e.registro %} · {{ e.registro }}{% endif %}<br>{% endif %}
+      {% if e.documento %}{{ e.documento }}<br>{% endif %}
+      {% if e.endereco %}{{ e.endereco }}<br>{% endif %}
+      {{ e.telefone }}{% if e.instagram %} · {{ e.instagram }}{% endif %}
+    </div>
+  </div>
+
+  <h1>Ficha de anamnese</h1>
+  <div class="bloco">
+    <dl class="dl">
+      <dt>Cliente</dt><dd><strong>{{ cliente }}</strong></dd>
+      <dt>Nascimento</dt><dd>{{ cliente.nascimento|date:"d/m/Y"|default:"____/____/______" }}{% if cliente.idade %} ({{ cliente.idade }} anos){% endif %}</dd>
+      <dt>CPF</dt><dd>{{ cliente.cpf|default:"______________________" }}</dd>
+      <dt>Telefone</dt><dd>{{ cliente.telefone|default:"______________________" }}</dd>
+      <dt>Endereço</dt><dd>{{ cliente.endereco_formatado|default:"__________________________________________________" }}</dd>
+      <dt>Profissão</dt><dd>{{ cliente.profissao|default:"______________________" }}</dd>
+    </dl>
+  </div>
+
+  <h2>Objetivo</h2>
+  <div class="resposta">{{ ficha.queixa_principal|default:"" }}</div>
+  <p>Tipo de pele: <strong>{{ ficha.get_tipo_pele_display|default:"__________" }}</strong> &nbsp; Fototipo: <strong>{{ ficha.fototipo|default:"____" }}</strong></p>
+
+  <h2>Saúde e hábitos</h2>
+  <div class="bloco">
+    <table>
+      <tbody>
+      <tr><td>Gestante ou amamentando</td><td>{{ ficha.gestante_lactante|yesno:"( X ) Sim  (   ) Não,(   ) Sim  ( X ) Não" }}</td>
+          <td>Diabetes</td><td>{{ ficha.diabetes|yesno:"( X ) Sim  (   ) Não,(   ) Sim  ( X ) Não" }}</td></tr>
+      <tr><td>Hipertensão</td><td>{{ ficha.hipertensao|yesno:"( X ) Sim  (   ) Não,(   ) Sim  ( X ) Não" }}</td>
+          <td>Problema cardíaco</td><td>{{ ficha.cardiaco|yesno:"( X ) Sim  (   ) Não,(   ) Sim  ( X ) Não" }}</td></tr>
+      <tr><td>Marcapasso ou metal no corpo</td><td>{{ ficha.marcapasso_metal|yesno:"( X ) Sim  (   ) Não,(   ) Sim  ( X ) Não" }}</td>
+          <td>Epilepsia</td><td>{{ ficha.epilepsia|yesno:"( X ) Sim  (   ) Não,(   ) Sim  ( X ) Não" }}</td></tr>
+      <tr><td>Distúrbio de coagulação</td><td>{{ ficha.coagulacao|yesno:"( X ) Sim  (   ) Não,(   ) Sim  ( X ) Não" }}</td>
+          <td>Tendência a queloide</td><td>{{ ficha.queloide|yesno:"( X ) Sim  (   ) Não,(   ) Sim  ( X ) Não" }}</td></tr>
+      <tr><td>Herpes</td><td>{{ ficha.herpes|yesno:"( X ) Sim  (   ) Não,(   ) Sim  ( X ) Não" }}</td>
+          <td>Câncer (atual ou tratamento)</td><td>{{ ficha.cancer|yesno:"( X ) Sim  (   ) Não,(   ) Sim  ( X ) Não" }}</td></tr>
+      <tr><td>Fumante</td><td>{{ ficha.fumante|yesno:"( X ) Sim  (   ) Não,(   ) Sim  ( X ) Não" }}</td>
+          <td>Usa ácidos / isotretinoína</td><td>{{ ficha.acidos_retinoides|yesno:"( X ) Sim  (   ) Não,(   ) Sim  ( X ) Não" }}</td></tr>
+      <tr><td>Exposição solar frequente</td><td>{{ ficha.exposicao_solar|yesno:"( X ) Sim  (   ) Não,(   ) Sim  ( X ) Não" }}</td>
+          <td>Usa protetor solar</td><td>{{ ficha.usa_protetor|yesno:"( X ) Sim  (   ) Não,(   ) Sim  ( X ) Não" }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Alergias:</strong> {{ ficha.alergias|default:"______________________________________________" }}</p>
+  <p><strong>Medicamentos em uso:</strong> {{ ficha.medicamentos|default:"______________________________________________" }}</p>
+  <p><strong>Cirurgias:</strong> {{ ficha.cirurgias|default:"______________________________________________" }}</p>
+  <p><strong>Procedimentos estéticos anteriores:</strong> {{ ficha.procedimentos_anteriores|default:"______________________________________________" }}</p>
+  {% if ficha.observacoes %}<p><strong>Observações:</strong> {{ ficha.observacoes }}</p>{% endif %}
+
+  <p style="margin-top:18px">Declaro que as informações acima são verdadeiras e que avisarei sobre qualquer mudança no meu estado de saúde.</p>
+  <div class="assinaturas">
+    <div>{{ cliente }}<br><small>Data: ____/____/________</small></div>
+    <div>{{ e.profissional|default:e.nome }}{% if e.registro %}<br><small>{{ e.registro }}</small>{% endif %}</div>
+  </div>
+
+  <div class="quebra-pagina"></div>
+  <h1 style="margin-top:24px">Termo de consentimento</h1>
+  <p>Eu, <strong>{{ cliente }}</strong>{% if cliente.cpf %}, CPF {{ cliente.cpf }}{% endif %}, declaro que fui informada sobre o(s)
+  procedimento(s) a que vou me submeter em <strong>{{ e.nome }}</strong>: como é feito, os resultados esperados (que variam de
+  pessoa para pessoa), os possíveis desconfortos e reações, e os cuidados antes e depois. Tive a oportunidade de tirar minhas
+  dúvidas e autorizo a realização do(s) procedimento(s).</p>
+  <p>Comprometo-me a seguir as orientações recebidas e a comunicar qualquer reação ou alteração na minha saúde.</p>
+  <p>Procedimento(s): ________________________________________________________________</p>
+
+  <h2>Autorização de uso de imagem</h2>
+  <p>Autorizo o registro de fotos para acompanhar a evolução do meu tratamento. Essas fotos ficam guardadas de forma
+  privada e só são usadas no meu acompanhamento, conforme a Lei Geral de Proteção de Dados (LGPD).</p>
+  <p>Sobre a divulgação (redes sociais, portfólio):<br>
+  (   ) Autorizo, sem mostrar o meu rosto &nbsp;&nbsp; (   ) Autorizo, inclusive com o rosto &nbsp;&nbsp; (   ) Não autorizo</p>
+  <p>Posso retirar esta autorização quando quiser, por escrito.</p>
+
+  <div class="assinaturas">
+    <div>{{ cliente }}<br><small>Data: ____/____/________</small></div>
+    <div>{{ e.profissional|default:e.nome }}{% if e.registro %}<br><small>{{ e.registro }}</small>{% endif %}</div>
+  </div>
+  <p class="doc-rodape">Emitido em {{ hoje|date:"d/m/Y" }} · Agendu</p>
+</div>
+{% endwith %}
+{% endblock %}

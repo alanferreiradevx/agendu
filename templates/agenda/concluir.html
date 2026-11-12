@@ -1,0 +1,45 @@
+{% extends "base.html" %}{% load agendu %}
+{% block titulo %}Concluir · {{ ag.cliente }}{% endblock %}
+{% block conteudo %}
+<p style="margin:0 0 8px"><a href="{% url 'agenda:detalhe' ag.pk %}">← Voltar</a></p>
+<h1>Concluir atendimento</h1>
+<p class="suave">{{ ag.cliente }} · {{ ag.procedimento }} · {{ ag.inicio|date:"d/m/Y H:i" }}</p>
+
+<form method="post" enctype="multipart/form-data" style="max-width:820px">{% csrf_token %}
+  {% if form.non_field_errors %}<div class="erros-gerais">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <div class="card">
+    <h2><svg class="ico"><use href="#i-dinheiro"/></svg>Pagamento</h2>
+    <div class="form-grid">
+      {% if form.fields.usar_pacote.queryset %}{% include "_campo.html" with campo=form.usar_pacote largo=True %}{% endif %}
+    </div>
+    <div id="pagamento" class="form-grid" style="margin-top:12px">
+      {% include "_campo.html" with campo=form.valor %}
+      {% include "_campo.html" with campo=form.forma %}
+      {% include "_campo.html" with campo=form.parcelas %}
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><svg class="ico"><use href="#i-caixa"/></svg>Sai do estoque</h2>
+    <ul class="lista-limpa">
+    {% for m in materiais %}
+      <li><span class="cresce">{{ m.material }}</span><span>{{ m.quantidade|numero }} {{ m.material.unidade }}</span>
+        <small>tem {{ m.material.quantidade|numero }}</small>{% if m.material.quantidade < m.quantidade %}<span class="tag tag-erro">vai ficar negativo</span>{% endif %}</li>
+    {% empty %}
+      <li class="suave">Nenhum material cadastrado neste procedimento (nada sai do estoque).</li>
+    {% endfor %}
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2><svg class="ico"><use href="#i-ficha"/></svg>Evolução e fotos <small class="suave" style="font-weight:600">opcional</small></h2>
+    <div class="form-grid">
+      {% include "_campo.html" with campo=form.evolucao largo=True %}
+      {% include "_campo.html" with campo=form.medidas %}
+      {% include "_campo.html" with campo=form.fotos %}
+      {% include "_campo.html" with campo=form.momento_fotos %}
+    </div>
+  </div>
+  <button class="btn btn-ok" type="submit"><svg class="ico"><use href="#i-check"/></svg>Concluir</button>
+</form>
+{% endblock %}

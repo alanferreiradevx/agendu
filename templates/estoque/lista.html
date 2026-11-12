@@ -1,0 +1,32 @@
+{% extends "base.html" %}{% load agendu %}
+{% block titulo %}Estoque{% endblock %}
+{% block conteudo %}
+<div class="cabecalho">
+  <div><h1>Estoque</h1><p class="suave" style="margin:0">{{ materiais|length }} material(is) · {{ total|dinheiro }} em estoque</p></div>
+  <div class="acoes">
+    {% if alerta %}<a class="btn btn-sec" href="{% url 'estoque:lista' %}">Ver todos</a>{% else %}<a class="btn btn-sec" href="?filtro=alerta"><svg class="ico"><use href="#i-alerta"/></svg>Só os alertas</a>{% endif %}
+    <a class="btn" href="{% url 'estoque:novo' %}"><svg class="ico"><use href="#i-mais"/></svg>Novo material</a>
+  </div>
+</div>
+<div class="card" style="padding:8px 14px">
+  <div class="tabela-wrap"><table>
+    <thead><tr><th>Material</th><th class="num">Quantidade</th><th class="num so-tela-grande">Mínimo</th><th class="so-tela-grande">Validade</th><th class="num so-tela-grande">Custo / un.</th><th></th></tr></thead>
+    <tbody>
+    {% for m in materiais %}
+      <tr>
+        <td><a href="{% url 'estoque:detalhe' m.pk %}">{{ m }}</a>{% if m.fornecedor %}<br><small>{{ m.fornecedor }}</small>{% endif %}</td>
+        <td class="num"><strong class="{% if m.quantidade < 0 %}negativo{% endif %}">{{ m.quantidade|numero }}</strong> {{ m.unidade }}</td>
+        <td class="num so-tela-grande">{{ m.estoque_minimo|numero }}</td>
+        <td class="so-tela-grande">{{ m.validade|date:"d/m/Y"|default:"—" }}</td>
+        <td class="num so-tela-grande">{{ m.custo_unitario|dinheiro }}</td>
+        <td class="num">{% if m.vencido %}<span class="tag tag-erro">vencido</span>{% elif m.vencendo %}<span class="tag tag-alerta">vencendo</span>{% endif %}
+          {% if m.abaixo_do_minimo %}<span class="tag tag-alerta">comprar</span>{% endif %}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="vazio">{% if alerta %}Nenhum alerta. Tudo em ordem.{% else %}Nenhum material. <a href="{% url 'estoque:novo' %}">Cadastre o primeiro</a> (ex.: sérum, ácido, luva, agulha).{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+{% if inativos %}<p class="suave" style="font-size:.85rem">{{ inativos }} material(is) desativado(s) não aparecem aqui (reative pelo cadastro).</p>{% endif %}
+{% endblock %}

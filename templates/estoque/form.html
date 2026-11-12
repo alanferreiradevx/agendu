@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block titulo %}{% if material %}Editar {{ material }}{% else %}Novo material{% endif %}{% endblock %}
+{% block conteudo %}
+<p style="margin:0 0 8px"><a href="{% if material %}{% url 'estoque:detalhe' material.pk %}{% else %}{% url 'estoque:lista' %}{% endif %}">← Voltar</a></p>
+<h1>{% if material %}Editar {{ material }}{% else %}Novo material{% endif %}</h1>
+<form method="post" class="card" style="margin-top:14px;max-width:820px">{% csrf_token %}
+  {% if form.non_field_errors %}<div class="erros-gerais">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <fieldset><legend>Material</legend><div class="form-grid">
+    {% include "_campo.html" with campo=form.nome %}
+    {% include "_campo.html" with campo=form.unidade %}
+    {% include "_campo.html" with campo=form.estoque_minimo %}
+    {% if material %}{% include "_campo.html" with campo=form.custo_unitario %}{% include "_campo.html" with campo=form.validade %}{% endif %}
+    {% include "_campo.html" with campo=form.fornecedor %}
+    {% include "_campo.html" with campo=form.ativo %}
+    {% include "_campo.html" with campo=form.observacoes largo=True %}
+  </div></fieldset>
+  {% if entrada %}
+  <fieldset><legend>Quanto você tem agora (opcional)</legend><div class="form-grid">
+    {% include "_campo.html" with campo=entrada.quantidade %}
+    {% include "_campo.html" with campo=entrada.valor_total %}
+    {% include "_campo.html" with campo=entrada.validade %}
+    {% include "_campo.html" with campo=entrada.lancar_despesa %}
+    {% include "_campo.html" with campo=entrada.forma %}
+  </div>
+  <p class="suave" style="font-size:.82rem;margin-bottom:0">Ex.: frasco de 30 ml por R$ 90 → quantidade 30 (unidade ml), valor 90. O custo por ml (R$ 3) é calculado sozinho. Desmarque "lançar como despesa" se a compra foi antes de começar a usar o Agendu.</p>
+  </fieldset>
+  {% endif %}
+  <button class="btn" type="submit">Salvar</button>
+</form>
+{% endblock %}

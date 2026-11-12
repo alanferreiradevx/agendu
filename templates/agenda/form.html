@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block titulo %}{% if ag %}Editar agendamento{% else %}Agendar{% endif %}{% endblock %}
+{% block conteudo %}
+<p style="margin:0 0 8px"><a href="{% if ag %}{% url 'agenda:detalhe' ag.pk %}{% else %}{% url 'agenda:semana' %}{% endif %}">← Voltar</a></p>
+<h1>{% if ag %}Editar agendamento{% else %}Agendar{% endif %}</h1>
+<form method="post" class="card" style="margin-top:14px;max-width:760px">{% csrf_token %}
+  {% if form.non_field_errors %}<div class="erros-gerais">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <div class="form-grid">
+    {% include "_campo.html" with campo=form.cliente %}
+    {% include "_campo.html" with campo=form.procedimento %}
+    {% include "_campo.html" with campo=form.data %}
+    {% include "_campo.html" with campo=form.hora %}
+    {% include "_campo.html" with campo=form.duracao %}
+    {% include "_campo.html" with campo=form.valor %}
+    {% include "_campo.html" with campo=form.pacote largo=True %}
+    {% include "_campo.html" with campo=form.observacoes largo=True %}
+  </div>
+  <p class="suave" style="font-size:.82rem">Cliente nova? <a href="{% url 'clientes:nova' %}">Cadastre aqui</a> e depois agende. Ao escolher o procedimento, duração e valor se preenchem sozinhos.</p>
+  <div class="botoes-form"><button class="btn" type="submit">Salvar</button></div>
+</form>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends "base.html" %}{% load agendu %}
+{% block titulo %}Faturamento{% endblock %}
+{% block conteudo %}
+<div class="cabecalho">
+  <div>
+    <h1>Faturamento</h1>
+    <div class="acoes" style="margin-top:4px">
+      <a class="btn-icone" href="?mes={{ mes_anterior }}" aria-label="Mês anterior"><svg class="ico"><use href="#i-seta-e"/></svg></a>
+      <strong style="text-transform:capitalize">{{ nome_mes }}</strong>
+      <a class="btn-icone" href="?mes={{ mes_proximo }}" aria-label="Próximo mês"><svg class="ico"><use href="#i-seta-d"/></svg></a>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-4" style="margin-bottom:18px">
+  <div class="card kpi destaque"><div class="rotulo">Faturado</div><div class="valor">{{ r.entradas|dinheiro }}</div></div>
+  <div class="card kpi"><div class="rotulo">Atendimentos</div><div class="valor">{{ atendimentos }}</div><small>{{ faltas }} falta(s)</small></div>
+  <div class="card kpi"><div class="rotulo">Despesas + taxas</div><div class="valor">{{ r.custos|dinheiro }}</div></div>
+  <div class="card kpi"><div class="rotulo">Lucro</div><div class="valor {% if r.lucro < 0 %}negativo{% else %}positivo{% endif %}">{{ r.lucro|dinheiro }}</div></div>
+</div>
+
+<div class="card" style="padding:8px 14px">
+  <h2 style="padding-top:10px">Por procedimento</h2>
+  <div class="tabela-wrap"><table>
+    <thead><tr><th>Procedimento</th><th class="num">Feitos</th><th class="num">Receita</th><th class="num">Taxas</th><th class="num">Materiais</th><th class="num">Sobrou</th><th class="num so-tela-grande">Média</th></tr></thead>
+    <tbody>
+    {% for l in linhas %}
+      <tr><td><span class="bolinha" style="--cor:{{ l.procedimento.cor }};display:inline-block"></span> {{ l.procedimento }}{% if l.de_pacote %}<br><small>{{ l.de_pacote }} de pacote</small>{% endif %}</td>
+        <td class="num">{{ l.qtd }}</td><td class="num">{{ l.receita|dinheiro }}</td><td class="num">{{ l.taxas|dinheiro }}</td>
+        <td class="num">{{ l.material|dinheiro }}</td><td class="num"><strong>{{ l.lucro|dinheiro }}</strong></td><td class="num so-tela-grande">{{ l.ticket|dinheiro }}</td></tr>
+    {% empty %}<tr><td colspan="7" class="vazio">Nenhum atendimento concluído neste mês.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+  <p class="suave" style="font-size:.8rem">Sessão de pacote conta pelo valor do pacote dividido pelas sessões. A venda do pacote aparece no caixa no dia em que foi paga.</p>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <h2>Últimos 6 meses</h2>
+    <div class="grafico-barras">
+      {% for h in historico %}<div class="col"><small>{{ h.entradas|dinheiro }}</small><div class="b" style="height:{{ h.pct }}%"></div><small>{{ h.nome }}</small></div>{% endfor %}
+    </div>
+    <div class="tabela-wrap" style="margin-top:14px"><table>
+      <thead><tr><th>Mês</th><th class="num">Atend.</th><th class="num">Entrou</th><th class="num">Lucro</th></tr></thead>
+      <tbody>{% for h in historico %}<tr><td>{{ h.nome }}</td><td class="num">{{ h.atendimentos }}</td><td class="num">{{ h.entradas|dinheiro }}</td><td class="num {% if h.lucro < 0 %}negativo{% endif %}">{{ h.lucro|dinheiro }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </div>
+  <div class="card">
+    <h2>Formas de pagamento</h2>
+    <ul class="lista-limpa">
+    {% for nome, f in formas %}<li><span class="cresce">{{ nome }}<br><small>{{ f.qtd }} pagamento(s) · taxa {{ f.taxa|dinheiro }}</small></span><strong>{{ f.valor|dinheiro }}</strong></li>
+    {% empty %}<li class="suave">Nenhuma entrada no mês.</li>{% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block titulo %}Agenda{% endblock %}
+{% block conteudo %}
+<div class="cabecalho">
+  <div>
+    <h1>Agenda</h1>
+    <p class="suave" style="margin:0">{{ segunda|date:"d/m" }} a {{ domingo|date:"d/m/Y" }}</p>
+  </div>
+  <div class="acoes">
+    <a class="btn btn-sec" href="?data={{ anterior|date:'Y-m-d' }}" aria-label="Semana anterior"><svg class="ico"><use href="#i-seta-e"/></svg></a>
+    <a class="btn btn-sec" href="?data={{ hoje|date:'Y-m-d' }}">Hoje</a>
+    <a class="btn btn-sec" href="?data={{ proxima|date:'Y-m-d' }}" aria-label="Próxima semana"><svg class="ico"><use href="#i-seta-d"/></svg></a>
+    <form method="get" class="inline"><input type="date" name="data" value="{{ segunda|date:'Y-m-d' }}" onchange="this.form.submit()" aria-label="Ir para a data" style="width:auto"></form>
+    <a class="btn" href="{% url 'agenda:novo' %}"><svg class="ico"><use href="#i-mais"/></svg>Agendar</a>
+  </div>
+</div>
+
+<div class="semana">
+  {% for c in colunas %}
+  <section class="dia{% if c.hoje %} hoje{% endif %}">
+    <div class="dia-topo"><strong>{{ c.nome }}</strong><span>{{ c.data|date:"d/m" }}</span></div>
+    <div class="dia-itens">
+      {% for a in c.itens %}
+        <a class="evento {{ a.status }}" style="--cor:{{ a.procedimento.cor }}" href="{% url 'agenda:detalhe' a.pk %}">
+          <strong>{{ a.inicio|time:"H:i" }} · {{ a.cliente.primeiro_nome }}</strong>
+          {{ a.procedimento }}{% if a.status == "confirmado" %} ✓{% elif a.status == "concluido" %} · feito{% elif a.status == "faltou" %} · faltou{% endif %}
+        </a>
+      {% endfor %}
+    </div>
+    <div class="dia-mais"><a class="btn btn-sec btn-peq" href="{% url 'agenda:novo' %}?data={{ c.data|date:'Y-m-d' }}"><svg class="ico"><use href="#i-mais"/></svg>Agendar</a></div>
+  </section>
+  {% endfor %}
+</div>
+<p class="suave" style="font-size:.85rem;margin-top:14px">
+  {% if request.GET.cancelados == "1" %}<a href="?data={{ segunda|date:'Y-m-d' }}">Esconder cancelados</a>{% else %}<a href="?data={{ segunda|date:'Y-m-d' }}&cancelados=1">Mostrar cancelados</a>{% endif %}
+</p>
+{% endblock %}
