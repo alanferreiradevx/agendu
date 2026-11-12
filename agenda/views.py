@@ -25,23 +25,81 @@ def _data(texto, padrao):
         return padrao
 
 
+PX_HORA = 64  # altura de 1 hora na grade (o CSS usa o mesmo valor em --hora)
+
+
+def _faixas(itens):
+    """
+    Atendimentos que se sobrepõem ficam lado a lado: cada um ganha uma "faixa"
+    (coluna) e o total de faixas do seu grupo, para dividir a largura do dia.
+    """
+    grupo, fim_grupo = [], None
+    for item in itens:  # já em ordem de início
+        if grupo and item["inicio"] >= fim_grupo:
+            for g in grupo:
+                g["faixas"] = max(x["faixa"] for x in grupo) + 1
+            grupo, fim_grupo = [], None
+        ocupadas = {g["faixa"] for g in grupo if g["fim"] > item["inicio"]}
+        item["faixa"] = next(n for n in range(len(grupo) + 1) if n not in ocupadas)
+        grupo.append(item)
+        fim_grupo = max(fim_grupo, item["fim"]) if fim_grupo else item["fim"]
+    for g in grupo:
+        g["faixas"] = max(x["faixa"] for x in grupo) + 1
+
+
 def semana(request):
+    """Agenda em grade de horários: Semana (7 colunas) ou Dia (1 coluna, padrão no celular)."""
     hoje = timezone.localdate()
     dia = _data(request.GET.get("data"), hoje)
+    modo = "dia" if request.GET.get("modo") == "dia" else "semana"
     segunda = dia - timedelta(days=dia.weekday())
-    dias = [segunda + timedelta(days=i) for i in range(7)]
+    semana_dias = [segunda + timedelta(days=i) for i in range(7)]
+    dias = [dia] if modo == "dia" else semana_dias
+
     inicio = timezone.make_aware(datetime.combine(segunda, time.min))
-    ags = (Agendamento.objects.filter(inicio__gte=inicio, inicio__lt=inicio + timedelta(days=7))
-           .select_related("cliente", "procedimento").order_by("inicio"))
+    ags = list(Agendamento.objects.filter(inicio__gte=inicio, inicio__lt=inicio + timedelta(days=7))
+               .select_related("cliente", "procedimento").order_by("inicio"))
     if request.GET.get("cancelados") != "1":
-        ags = ags.exclude(status=Agendamento.CANCELADO)
-    por_dia = {d: [] for d in dias}
+        ags = [a for a in ags if a.status != Agendamento.CANCELADO]
+
+    # Faixa de horas: o expediente, esticado se algum atendimento cair fora dele.
+    estudio = Estudio.atual()
+    h_ini, h_fim = estudio.hora_abre.hour, estudio.hora_fecha.hour + (1 if estudio.hora_fecha.minute else 0)
+    por_dia = {d: [] for d in semana_dias}
     for a in ags:
-        por_dia[timezone.localdate(a.inicio)].append(a)
-    colunas = [{"data": d, "nome": DIAS[i], "itens": por_dia[d], "hoje": d == hoje} for i, d in enumerate(dias)]
+        ini, fim = timezone.localtime(a.inicio), timezone.localtime(a.fim)
+        por_dia[ini.date()].append({"ag": a, "inicio": ini, "fim": fim})
+        if ini.date() in dias:
+            h_ini = min(h_ini, ini.hour)
+            h_fim = max(h_fim, fim.hour + (1 if fim.minute or fim.date() > ini.date() else 0))
+    h_fim = min(max(h_fim, h_ini + 1), 24)
+
+    agora = timezone.localtime()
+    colunas = []
+    for d in dias:
+        itens = por_dia[d]
+        _faixas(itens)
+        for it in itens:
+            minutos = (it["inicio"].hour - h_ini) * 60 + it["inicio"].minute
+            duracao = max(int((it["fim"] - it["inicio"]).total_seconds() // 60), 20)
+            it["top"] = round(minutos * PX_HORA / 60)
+            it["altura"] = max(round(duracao * PX_HORA / 60) - 2, 22)
+            it["curto"] = duracao < 45
+        linha_agora = None
+        if d == hoje and h_ini <= agora.hour < h_fim:
+            linha_agora = round(((agora.hour - h_ini) * 60 + agora.minute) * PX_HORA / 60)
+        colunas.append({"data": d, "nome": DIAS[d.weekday()], "itens": itens, "hoje": d == hoje,
+                        "agora": linha_agora})
+
+    passo = timedelta(days=1 if modo == "dia" else 7)
     return render(request, "agenda/semana.html", {
-        "colunas": colunas, "segunda": segunda, "domingo": dias[-1],
-        "anterior": segunda - timedelta(days=7), "proxima": segunda + timedelta(days=7), "hoje": hoje,
+        "modo": modo, "dia": dia, "colunas": colunas, "horas": list(range(h_ini, h_fim)),
+        "altura_total": (h_fim - h_ini) * PX_HORA, "px_hora": PX_HORA,
+        "faixa_dias": [{"data": d, "nome": DIAS[d.weekday()][:3], "qtd": len(por_dia[d]), "hoje": d == hoje,
+                        "escolhido": d == dia} for d in semana_dias],
+        "segunda": segunda, "domingo": semana_dias[-1], "total_semana": sum(len(v) for v in por_dia.values()),
+        "anterior": dia - passo, "proxima": dia + passo, "hoje": hoje,
+        "cancelados": request.GET.get("cancelados") == "1",
     })
 
 

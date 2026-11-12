@@ -1,37 +1,89 @@
 {% extends "base.html" %}
 {% block titulo %}Agenda{% endblock %}
 {% block conteudo %}
-<div class="cabecalho">
+<div class="cal-topo">
   <div>
-    <h1>Agenda</h1>
-    <p class="suave" style="margin:0">{{ segunda|date:"d/m" }} a {{ domingo|date:"d/m/Y" }}</p>
+    <h1 style="text-transform:capitalize">{% if modo == "dia" %}{{ dia|date:"l, d \d\e F" }}{% else %}{{ segunda|date:"d" }} a {{ domingo|date:"d \d\e F" }}{% endif %}</h1>
+    <p class="suave" style="margin:0">{{ total_semana }} atendimento(s) nesta semana</p>
   </div>
   <div class="acoes">
-    <a class="btn btn-sec" href="?data={{ anterior|date:'Y-m-d' }}" aria-label="Semana anterior"><svg class="ico"><use href="#i-seta-e"/></svg></a>
-    <a class="btn btn-sec" href="?data={{ hoje|date:'Y-m-d' }}">Hoje</a>
-    <a class="btn btn-sec" href="?data={{ proxima|date:'Y-m-d' }}" aria-label="Próxima semana"><svg class="ico"><use href="#i-seta-d"/></svg></a>
-    <form method="get" class="inline"><input type="date" name="data" value="{{ segunda|date:'Y-m-d' }}" onchange="this.form.submit()" aria-label="Ir para a data" style="width:auto"></form>
-    <a class="btn" href="{% url 'agenda:novo' %}"><svg class="ico"><use href="#i-mais"/></svg>Agendar</a>
+    <div class="segmentado" role="group" aria-label="Visualização">
+      <a href="?modo=dia&data={{ dia|date:'Y-m-d' }}"{% if modo == "dia" %} class="ativo"{% endif %}>Dia</a>
+      <a href="?modo=semana&data={{ dia|date:'Y-m-d' }}"{% if modo == "semana" %} class="ativo"{% endif %}>Semana</a>
+    </div>
+    <div class="segmentado">
+      <a href="?modo={{ modo }}&data={{ anterior|date:'Y-m-d' }}" aria-label="Anterior"><svg class="ico"><use href="#i-seta-e"/></svg></a>
+      <a href="?modo={{ modo }}&data={{ hoje|date:'Y-m-d' }}">Hoje</a>
+      <a href="?modo={{ modo }}&data={{ proxima|date:'Y-m-d' }}" aria-label="Próximo"><svg class="ico"><use href="#i-seta-d"/></svg></a>
+    </div>
+    <form method="get" class="inline so-tela-grande"><input type="hidden" name="modo" value="{{ modo }}">
+      <input type="date" name="data" value="{{ dia|date:'Y-m-d' }}" onchange="this.form.submit()" aria-label="Ir para a data" class="cal-data"></form>
+    <a class="btn so-tela-grande" href="{% url 'agenda:novo' %}?data={{ dia|date:'Y-m-d' }}"><svg class="ico"><use href="#i-mais"/></svg>Agendar</a>
   </div>
 </div>
 
-<div class="semana">
-  {% for c in colunas %}
-  <section class="dia{% if c.hoje %} hoje{% endif %}">
-    <div class="dia-topo"><strong>{{ c.nome }}</strong><span>{{ c.data|date:"d/m" }}</span></div>
-    <div class="dia-itens">
-      {% for a in c.itens %}
-        <a class="evento {{ a.status }}" style="--cor:{{ a.procedimento.cor }}" href="{% url 'agenda:detalhe' a.pk %}">
-          <strong>{{ a.inicio|time:"H:i" }} · {{ a.cliente.primeiro_nome }}</strong>
-          {{ a.procedimento }}{% if a.status == "confirmado" %} ✓{% elif a.status == "concluido" %} · feito{% elif a.status == "faltou" %} · faltou{% endif %}
+{% if modo == "dia" %}
+<nav class="faixa-dias" aria-label="Dias da semana">
+  {% for d in faixa_dias %}
+    <a href="?modo=dia&data={{ d.data|date:'Y-m-d' }}" class="{% if d.escolhido %}escolhido{% endif %}{% if d.hoje %} hoje{% endif %}">
+      <span>{{ d.nome }}</span><strong>{{ d.data|date:"d" }}</strong>
+      <i class="pontos">{% if d.qtd %}{{ d.qtd }}{% endif %}</i>
+    </a>
+  {% endfor %}
+</nav>
+{% endif %}
+
+<div class="cal{% if modo == 'dia' %} cal-dia{% endif %}" style="--n:{{ colunas|length }};--hora:{{ px_hora }}px">
+  <div class="cal-cabeca">
+    <div class="cal-canto"></div>
+    {% for c in colunas %}
+      <a class="cal-cab{% if c.hoje %} hoje{% endif %}" href="?modo=dia&data={{ c.data|date:'Y-m-d' }}">
+        <span>{{ c.nome|slice:":3" }}</span><strong>{{ c.data|date:"d" }}</strong>
+      </a>
+    {% endfor %}
+  </div>
+  <div class="cal-corpo" style="height:{{ altura_total }}px">
+    <div class="cal-horas">
+      {% for h in horas %}<div class="cal-hora"><span>{{ h|stringformat:"02d" }}:00</span></div>{% endfor %}
+    </div>
+    {% for c in colunas %}
+    <div class="cal-coluna{% if c.hoje %} hoje{% endif %}">
+      {% for h in horas %}
+        <a class="cal-slot" href="{% url 'agenda:novo' %}?data={{ c.data|date:'Y-m-d' }}&hora={{ h|stringformat:'02d' }}:00"
+           aria-label="Agendar {{ c.nome }} às {{ h }}h"><span>+ {{ h|stringformat:"02d" }}:00</span></a>
+      {% endfor %}
+      {% for it in c.itens %}
+        <a class="cal-evento {{ it.ag.status }}{% if it.curto %} curto{% endif %}" href="{% url 'agenda:detalhe' it.ag.pk %}"
+           style="--cor:{{ it.ag.procedimento.cor }};top:{{ it.top }}px;height:{{ it.altura }}px;--faixa:{{ it.faixa }};--faixas:{{ it.faixas }}"
+           title="{{ it.inicio|time:'H:i' }}–{{ it.fim|time:'H:i' }} · {{ it.ag.cliente }} · {{ it.ag.procedimento }}">
+          <span class="cal-ev-hora">{{ it.inicio|time:"H:i" }}{% if not it.curto %} – {{ it.fim|time:"H:i" }}{% endif %}
+            {% if it.ag.status == "confirmado" %}<svg class="ico"><use href="#i-check"/></svg>{% elif it.ag.status == "concluido" %}<em>feito</em>{% elif it.ag.status == "faltou" %}<em>faltou</em>{% elif it.ag.status == "cancelado" %}<em>cancelado</em>{% endif %}</span>
+          <strong>{{ it.ag.cliente }}</strong>
+          {% if not it.curto %}<span class="cal-ev-proc">{{ it.ag.procedimento }}</span>{% endif %}
         </a>
       {% endfor %}
+      {% if c.agora is not None %}<div class="cal-agora" style="top:{{ c.agora }}px"></div>{% endif %}
     </div>
-    <div class="dia-mais"><a class="btn btn-sec btn-peq" href="{% url 'agenda:novo' %}?data={{ c.data|date:'Y-m-d' }}"><svg class="ico"><use href="#i-mais"/></svg>Agendar</a></div>
-  </section>
-  {% endfor %}
+    {% endfor %}
+  </div>
 </div>
-<p class="suave" style="font-size:.85rem;margin-top:14px">
-  {% if request.GET.cancelados == "1" %}<a href="?data={{ segunda|date:'Y-m-d' }}">Esconder cancelados</a>{% else %}<a href="?data={{ segunda|date:'Y-m-d' }}&cancelados=1">Mostrar cancelados</a>{% endif %}
+
+<p class="suave" style="font-size:.85rem;margin-top:12px">
+  Toque num horário vazio para agendar.
+  {% if cancelados %}<a href="?modo={{ modo }}&data={{ dia|date:'Y-m-d' }}">Esconder cancelados</a>{% else %}<a href="?modo={{ modo }}&data={{ dia|date:'Y-m-d' }}&cancelados=1">Mostrar cancelados</a>{% endif %}
 </p>
+
+<script>
+  // No celular, a agenda abre no modo Dia (a semana inteira fica apertada demais).
+  if (window.innerWidth < 760 && location.search.indexOf("modo=") === -1) {
+    location.replace("?modo=dia" + (location.search ? "&" + location.search.slice(1) : ""));
+  }
+  // Rola até o horário de agora (ou o primeiro atendimento) ao abrir.
+  document.addEventListener("DOMContentLoaded", function () {
+    var alvo = document.querySelector(".cal-agora") || document.querySelector(".cal-evento");
+    if (alvo && alvo.getBoundingClientRect().bottom > window.innerHeight - 80) {  // só se estiver fora da tela
+      window.scrollTo({ top: Math.max(alvo.getBoundingClientRect().top + window.scrollY - 220, 0) });
+    }
+  });
+</script>
 {% endblock %}

@@ -396,3 +396,35 @@ class TrocarAcessoTests(TestCase):
             call_command("trocar_acesso", stdout=StringIO())
         self.assertTrue(self.client.login(username="novo@estudio.com", password="Outra-senha-2026"))
         self.assertFalse(self.client.login(username="velho@a.com", password="senha-forte-123"))
+
+
+class AgendaGradeTests(Base):
+    def test_semana_e_dia_em_grade_com_blocos_no_horario(self):
+        ag = self.marcar(dias=0, hora=14)
+        r = self.client.get("/agenda/?modo=semana")
+        self.assertContains(r, 'class="cal"')
+        self.assertContains(r, "Maria Silva")
+        item = next(i for c in r.context["colunas"] for i in c["itens"] if i["ag"] == ag)
+        horas = r.context["horas"]
+        self.assertEqual(item["top"], (14 - horas[0]) * 64)  # 64 px por hora
+        self.assertEqual(item["altura"], 64 - 2)  # 60 minutos
+        r = self.client.get(f"/agenda/?modo=dia&data={timezone.localdate():%Y-%m-%d}")
+        self.assertEqual(len(r.context["colunas"]), 1)
+        self.assertContains(r, "faixa-dias")
+        # horário vazio leva ao agendamento já com dia e hora
+        self.assertContains(r, f"/agenda/novo/?data={timezone.localdate():%Y-%m-%d}&hora=10:00")
+
+    def test_atendimentos_no_mesmo_horario_ficam_lado_a_lado(self):
+        from agenda.views import _faixas
+
+        base = timezone.now().replace(minute=0, second=0, microsecond=0)
+        h = lambda m: base + timedelta(minutes=m)  # noqa: E731
+        itens = [{"inicio": h(0), "fim": h(60)}, {"inicio": h(30), "fim": h(90)}, {"inicio": h(60), "fim": h(120)},
+                 {"inicio": h(180), "fim": h(240)}]
+        _faixas(itens)
+        self.assertEqual([(i["faixa"], i["faixas"]) for i in itens], [(0, 2), (1, 2), (0, 2), (0, 1)])
+
+    def test_horario_fora_do_expediente_estica_a_grade(self):
+        self.marcar(dias=0, hora=6)
+        r = self.client.get(f"/agenda/?modo=dia&data={timezone.localdate():%Y-%m-%d}")
+        self.assertEqual(r.context["horas"][0], 6)
