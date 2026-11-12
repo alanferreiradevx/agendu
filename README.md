@@ -35,10 +35,9 @@ outra pasta, outro banco, outro serviço).
 - **WhatsApp com 1 clique** (grátis, sem API): lembrete do horário, cuidados pós,
   retorno e parabéns. Abre o WhatsApp com a mensagem pronta; você confere e envia.
   Textos editáveis em Configurações.
-- **Painel**: atendimentos de hoje e amanhã, atendimentos que passaram sem fechar,
-  faturado/despesas/lucro/ticket médio do mês, alertas de estoque, **hora do retorno**
-  (quem chamar de volta) e aniversariantes do mês.
-
+- **Painel**: primeiro os agendamentos (hoje e próximos dias), depois os que passaram sem
+  fechar, números do mês (sem dinheiro), **hora do retorno** (quem chamar de volta),
+  aniversariantes e alertas de estoque.
 - **Senha do financeiro**: tudo que mostra dinheiro (caixa, faturamento, taxas, preços, custos do
   estoque, valores de pacotes e atendimentos) fica trancado atrás de uma senha separada da de login.
   Tranca sozinho depois de 15 minutos sem usar, ou no botão "Trancar". Trancado, dá para agendar e
