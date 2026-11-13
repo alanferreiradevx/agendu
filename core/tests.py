@@ -42,18 +42,20 @@ class Base(TestCase):
         cache.clear()
         self.user = get_user_model().objects.create_user("ana", email="ana@estudio.com", password="senha-forte-123")
         self.client.force_login(self.user)
-        Estudio.atual().definir_senha_financeiro("4321")
+        self.estudio = Estudio.objects.create(nome="Studio Ana", profissional="Ana", dono=self.user)
+        self.estudio.criar_formas_padrao()
+        self.estudio.definir_senha_financeiro("4321")
         self.abrir_financeiro()
-        self.cliente = Cliente.objects.create(nome="Maria Silva", telefone="(11) 98765-4321")
-        self.luva = Material.objects.create(nome="Luva", unidade="par")
+        self.cliente = Cliente.objects.create(estudio=self.estudio, nome="Maria Silva", telefone="(11) 98765-4321")
+        self.luva = Material.objects.create(estudio=self.estudio, nome="Luva", unidade="par")
         movimentar(self.luva, 10, "entrada", custo_unitario=Decimal("0.50"))
-        self.acido = Material.objects.create(nome="Ácido", unidade="ml")
+        self.acido = Material.objects.create(estudio=self.estudio, nome="Ácido", unidade="ml")
         movimentar(self.acido, 30, "entrada", custo_unitario=Decimal("4"))
-        self.peeling = Procedimento.objects.create(nome="Peeling", preco=Decimal("200"), duracao_min=60, retorno_dias=21)
+        self.peeling = Procedimento.objects.create(estudio=self.estudio, nome="Peeling", preco=Decimal("200"), duracao_min=60, retorno_dias=21)
         ProcedimentoMaterial.objects.create(procedimento=self.peeling, material=self.luva, quantidade=1)
         ProcedimentoMaterial.objects.create(procedimento=self.peeling, material=self.acido, quantidade=3)
-        self.pix = FormaPagamento.objects.get(nome="PIX")
-        self.credito = FormaPagamento.objects.get(nome="Cartão de crédito à vista")
+        self.pix = FormaPagamento.objects.get(estudio=self.estudio, nome="PIX")
+        self.credito = FormaPagamento.objects.get(estudio=self.estudio, nome="Cartão de crédito à vista")
 
     def abrir_financeiro(self):
         self.client.post("/financeiro/entrar/", {"senha": "4321"})
@@ -128,7 +130,7 @@ class AgendamentoTests(Base):
         ag = Agendamento.objects.get()
         self.assertRedirects(r, f"/agenda/{ag.pk}/")
         self.assertEqual(timezone.localtime(ag.fim).hour, 15)
-        outra = Cliente.objects.create(nome="Joana")
+        outra = Cliente.objects.create(estudio=self.estudio, nome="Joana")
         r = self.client.post("/agenda/novo/", {**dados, "cliente": outra.pk, "hora": "14:30"})
         self.assertContains(r, "Esse horário bate com Maria Silva")
         # cancelado libera o horário
@@ -280,9 +282,9 @@ class CaixaTests(Base):
 class PainelTests(Base):
     def test_retorno_aparece_e_some_quando_agenda(self):
         servicos.concluir(self.marcar(dias=-20), forma=self.pix)  # retorno em 21 dias -> amanhã
-        self.assertEqual([r["cliente"] for r in retornos()], [self.cliente])
+        self.assertEqual([r["cliente"] for r in retornos(self.estudio)], [self.cliente])
         self.marcar(dias=3)
-        self.assertEqual(retornos(), [])
+        self.assertEqual(retornos(self.estudio), [])
 
     def test_aniversariante_do_mes(self):
         hoje = timezone.localdate()
@@ -366,13 +368,14 @@ class FinanceiroTrancadoTests(Base):
         self.assertFalse(Lancamento.objects.filter(categoria="material").exists())
 
     def test_primeiro_acesso_cria_a_senha(self):
-        Estudio.atual().definir_senha_financeiro("")
+        self.estudio.definir_senha_financeiro("")
         r = self.client.get("/financeiro/entrar/")
         self.assertContains(r, "Criar senha do financeiro")
         r = self.client.post("/financeiro/entrar/", {"senha": "9876", "confirmar": "9876", "next": "/caixa/"})
         self.assertRedirects(r, "/caixa/")
-        self.assertTrue(Estudio.atual().confere_senha_financeiro("9876"))
-        self.assertNotIn("9876", Estudio.atual().senha_financeiro)  # guardada criptografada
+        self.estudio.refresh_from_db()
+        self.assertTrue(self.estudio.confere_senha_financeiro("9876"))
+        self.assertNotIn("9876", self.estudio.senha_financeiro)  # guardada criptografada
 
 
 class UtilTests(TestCase):

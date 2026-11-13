@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
 
+from core import master
 from core import views as core_views
 from core.forms import LoginForm
 
@@ -14,6 +15,11 @@ urlpatterns = [
     path("configuracoes/", core_views.configuracoes, name="configuracoes"),
     path("configuracoes/logo/", core_views.logo, name="logo"),
     path("busca/", core_views.busca, name="busca"),
+    path("acessos/", master.acessos, name="acessos"),
+    path("acessos/novo/", master.acesso_editar, name="acesso_novo"),
+    path("acessos/<int:pk>/", master.acesso_editar, name="acesso_editar"),
+    path("acessos/<int:pk>/<str:acao>/", master.acesso_acao, name="acesso_acao"),
+    path("convite/<uidb64>/<token>/", master.aceitar_convite, name="aceitar_convite"),
     path("financeiro/entrar/", core_views.financeiro_entrar, name="financeiro_entrar"),
     path("financeiro/trancar/", core_views.financeiro_trancar, name="financeiro_trancar"),
     path("financeiro/senha/", core_views.financeiro_senha, name="financeiro_senha"),

@@ -1,0 +1,25 @@
+{% extends "base.html" %}{% load static %}
+{% block titulo %}Criar senha{% endblock %}
+{% block corpo %}
+<div class="tela-login">
+  <div>
+    {% if valido %}
+    <form method="post" class="caixa-login">{% csrf_token %}
+      <img class="logo" src="{% static 'img/logo.svg' %}" alt="Agendu">
+      <h1 style="font-size:1.2rem;text-align:center">Crie sua senha</h1>
+      <p class="suave" style="text-align:center;margin-top:0">Para entrar com <strong>{{ usuario.email }}</strong></p>
+      {% for campo in form %}{% include "_campo.html" %}<div style="height:10px"></div>{% endfor %}
+      <button class="btn" type="submit">Salvar e entrar</button>
+    </form>
+    {% else %}
+    <div class="caixa-login" style="text-align:center">
+      <img class="logo" src="{% static 'img/logo.svg' %}" alt="Agendu">
+      <h1 style="font-size:1.2rem">Link expirado ou já usado</h1>
+      <p class="suave">Peça um link novo para quem liberou o seu acesso.</p>
+      <a class="btn" href="{% url 'login' %}">Ir para a entrada</a>
+    </div>
+    {% endif %}
+    <p class="rodape-login">Agendu · by Ativix</p>
+  </div>
+</div>
+{% endblock %}

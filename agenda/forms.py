@@ -12,11 +12,18 @@ from financeiro.models import FormaPagamento
 from .models import Agendamento, Pacote, Procedimento, ProcedimentoMaterial
 
 
-def formas_ativas():
-    return FormaPagamento.objects.filter(ativo=True)
+class NomeUnicoNoEspacoMixin:
+    """O nome não pode repetir dentro do mesmo espaço (outro espaço pode ter um igual)."""
+
+    def clean_nome(self):
+        nome = self.cleaned_data["nome"].strip()
+        repetido = type(self.instance).objects.filter(estudio_id=self.instance.estudio_id, nome__iexact=nome)
+        if repetido.exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError("Já existe um cadastro com este nome.")
+        return nome
 
 
-class ProcedimentoForm(forms.ModelForm):
+class ProcedimentoForm(NomeUnicoNoEspacoMixin, forms.ModelForm):
     class Meta:
         model = Procedimento
         fields = ["nome", "duracao_min", "preco", "retorno_dias", "cor", "descricao", "cuidados_pos", "ativo"]
@@ -38,9 +45,9 @@ class ProcedimentoMaterialForm(forms.ModelForm):
         fields = ["material", "quantidade"]
         widgets = {"quantidade": QUANTIDADE}
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, estudio, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["material"].queryset = Material.objects.filter(ativo=True)
+        self.fields["material"].queryset = Material.objects.filter(estudio=estudio, ativo=True)
         self.fields["material"].label_from_instance = lambda m: f"{m.nome} ({m.get_unidade_display()})"
 
 
@@ -61,23 +68,24 @@ class AgendamentoForm(forms.ModelForm):
         fields = ["cliente", "procedimento", "valor", "pacote", "forma_prevista", "parcelas_previstas", "observacoes"]
         widgets = {"valor": DINHEIRO, "observacoes": forms.Textarea(attrs={"rows": 2})}
 
-    def __init__(self, *args, financeiro=True, **kwargs):
+    def __init__(self, *args, estudio, financeiro=True, **kwargs):
         super().__init__(*args, **kwargs)
+        self.instance.estudio = estudio
         if not financeiro:
             del self.fields["valor"]  # trancado: usa o preço do procedimento sem mostrar
-        pagamento.preparar(self, "forma_prevista")
+        pagamento.preparar(self, estudio, "forma_prevista")
         self.fields["forma_prevista"].required = False
         self.fields["forma_prevista"].label = "Forma de pagamento"
         self.fields["parcelas_previstas"] = pagamento.campo_parcelas()
-        self.fields["cliente"].queryset = Cliente.objects.filter(ativo=True)
-        procs = Procedimento.objects.filter(ativo=True)
+        self.fields["cliente"].queryset = Cliente.objects.filter(estudio=estudio, ativo=True)
+        procs = Procedimento.objects.filter(estudio=estudio, ativo=True)
         if self.instance.pk:  # procedimento desativado continua aparecendo no agendamento antigo
-            procs = procs | Procedimento.objects.filter(pk=self.instance.procedimento_id)
+            procs = procs | Procedimento.objects.filter(estudio=estudio, pk=self.instance.procedimento_id)
         self.fields["procedimento"].queryset = procs
         # dados para o JavaScript preencher duração e valor ao escolher o procedimento
         self.fields["procedimento"].widget.attrs["data-procedimentos"] = "|".join(
             f"{p.pk}:{p.duracao_min}:{p.preco}" for p in procs)
-        pacotes = Pacote.objects.select_related("cliente", "procedimento")
+        pacotes = Pacote.objects.filter(estudio=estudio).select_related("cliente", "procedimento")
         self.fields["pacote"].queryset = pacotes
         self.fields["pacote"].label_from_instance = (
             lambda p: f"{p.cliente} - {p.sessoes}x {p.procedimento} ({p.restantes} restante(s))")
@@ -116,7 +124,7 @@ class FormaPrevistaForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        pagamento.preparar(self, "forma_prevista")
+        pagamento.preparar(self, self.instance.estudio, "forma_prevista")
         self.fields["forma_prevista"].required = False
         self.fields["forma_prevista"].label = ""  # o quadro já tem o título "Forma de pagamento"
         self.fields["parcelas_previstas"] = pagamento.campo_parcelas()
@@ -155,7 +163,7 @@ class ConcluirForm(forms.Form):
             self.initial["usar_pacote"] = agendamento.pacote_id
         elif len(pacotes) == 1:
             self.initial["usar_pacote"] = pacotes[0].pk
-        pagamento.preparar(self)
+        pagamento.preparar(self, agendamento.estudio)
         self.initial.setdefault("valor", agendamento.valor)
         self.initial.setdefault("forma", agendamento.forma_prevista_id)  # já vem marcado como ia pagar
         if agendamento.parcelas_previstas > 1:
@@ -183,11 +191,12 @@ class PacoteForm(forms.ModelForm):
         fields = ["cliente", "procedimento", "sessoes", "valor", "data_compra", "validade", "observacoes"]
         widgets = {"valor": DINHEIRO, "data_compra": DATA, "validade": DATA}
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, estudio, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["cliente"].queryset = Cliente.objects.filter(ativo=True)
-        self.fields["procedimento"].queryset = Procedimento.objects.filter(ativo=True)
-        pagamento.preparar(self)
+        self.instance.estudio = estudio
+        self.fields["cliente"].queryset = Cliente.objects.filter(estudio=estudio, ativo=True)
+        self.fields["procedimento"].queryset = Procedimento.objects.filter(estudio=estudio, ativo=True)
+        pagamento.preparar(self, estudio)
 
     def clean(self):
         dados = super().clean()
@@ -205,9 +214,9 @@ class ReceberForm(forms.Form):
     forma = forms.ModelChoiceField(label="Forma de pagamento", queryset=FormaPagamento.objects.none())
     parcelas = pagamento.campo_parcelas()
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, estudio, **kwargs):
         super().__init__(*args, **kwargs)
-        pagamento.preparar(self)
+        pagamento.preparar(self, estudio)
 
     def clean(self):
         dados = super().clean()

@@ -55,7 +55,7 @@ def concluir(agendamento, *, forma=None, valor=None, parcelas=1, usar_pacote=Non
         ag.valor = valor
         if valor > 0:
             Lancamento.objects.create(
-                tipo=Lancamento.ENTRADA, categoria="atendimento", descricao=descricao, valor=valor,
+                estudio=ag.estudio, tipo=Lancamento.ENTRADA, categoria="atendimento", descricao=descricao, valor=valor,
                 forma=forma, parcelas=parcelas or 1, taxa=forma.taxa_sobre(valor) if forma else 0,
                 cliente=ag.cliente, agendamento=ag, data=timezone.localdate(),
             )
@@ -99,12 +99,14 @@ def desfazer_conclusao(agendamento):
 @transaction.atomic
 def vender_pacote(pacote, *, forma=None, valor_pago=None, parcelas=1):
     """Grava o pacote e, se houver pagamento agora, lança a entrada no caixa."""
+    if not pacote.estudio_id and pacote.cliente_id:
+        pacote.estudio_id = pacote.cliente.estudio_id
     pacote.full_clean()
     pacote.save()
     valor_pago = centavos(pacote.valor if valor_pago is None else valor_pago)
     if valor_pago > 0:
         Lancamento.objects.create(
-            tipo=Lancamento.ENTRADA, categoria="pacote", valor=valor_pago, forma=forma, parcelas=parcelas or 1,
+            estudio=pacote.estudio, tipo=Lancamento.ENTRADA, categoria="pacote", valor=valor_pago, forma=forma, parcelas=parcelas or 1,
             taxa=forma.taxa_sobre(valor_pago) if forma else 0, cliente=pacote.cliente, pacote=pacote,
             descricao=f"Pacote {pacote.sessoes}x {pacote.procedimento} - {pacote.cliente}",
         )
@@ -115,7 +117,7 @@ def receber_pacote(pacote, *, valor, forma=None, parcelas=1):
     """Pagamento de uma parte do pacote que ficou em aberto."""
     valor = centavos(valor)
     return Lancamento.objects.create(
-        tipo=Lancamento.ENTRADA, categoria="pacote", valor=valor, forma=forma, parcelas=parcelas or 1,
+        estudio=pacote.estudio, tipo=Lancamento.ENTRADA, categoria="pacote", valor=valor, forma=forma, parcelas=parcelas or 1,
         taxa=forma.taxa_sobre(valor) if forma else 0, cliente=pacote.cliente, pacote=pacote,
         descricao=f"Pagamento do pacote {pacote.sessoes}x {pacote.procedimento} - {pacote.cliente}",
     )

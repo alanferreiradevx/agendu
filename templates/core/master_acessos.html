@@ -1,0 +1,60 @@
+{% extends "base.html" %}{% load agendu %}
+{% block titulo %}Acessos{% endblock %}
+{% block conteudo %}
+<div class="cabecalho">
+  <div>
+    <h1>Acessos ao Agendu</h1>
+    <p class="suave" style="margin:0">Profissionais que usam o Agendu, cada uma com o próprio espaço. Só você vê esta área.</p>
+  </div>
+  <a class="btn" href="{% url 'acesso_novo' %}"><svg class="ico"><use href="#i-mais"/></svg>Liberar novo acesso</a>
+</div>
+
+<div class="grid grid-4" style="margin-bottom:18px">
+  <div class="card kpi destaque"><div class="rotulo">Acessos ativos</div><div class="valor">{{ ativos }} <small>de {{ total }}</small></div></div>
+  <div class="card kpi"><div class="rotulo">Receita mensal (ativos)</div><div class="valor">{{ receita|dinheiro }}</div></div>
+  <div class="card kpi"><div class="rotulo">Vencendo em 7 dias</div><div class="valor{% if vencendo %} negativo{% endif %}">{{ vencendo }}</div></div>
+  <div class="card kpi"><div class="rotulo">Bloqueados ou vencidos</div><div class="valor">{{ bloqueados }}</div></div>
+</div>
+
+<nav class="abas">
+  <a href="?"{% if not filtro %} class="ativo"{% endif %}>Todos</a>
+  <a href="?situacao=ativo"{% if filtro == "ativo" %} class="ativo"{% endif %}>Ativos</a>
+  <a href="?situacao=vencendo"{% if filtro == "vencendo" %} class="ativo"{% endif %}>Vencendo</a>
+  <a href="?situacao=convite"{% if filtro == "convite" %} class="ativo"{% endif %}>Convite pendente</a>
+  <a href="?situacao=vencido"{% if filtro == "vencido" %} class="ativo"{% endif %}>Vencidos</a>
+  <a href="?situacao=bloqueado"{% if filtro == "bloqueado" %} class="ativo"{% endif %}>Bloqueados</a>
+</nav>
+
+<div class="card" style="padding:8px 14px">
+  <div class="tabela-wrap"><table>
+    <thead><tr><th>Espaço / profissional</th><th>Situação</th><th>Válido até</th><th class="so-tela-grande">Plano</th>
+      <th class="num so-tela-grande">Uso</th><th class="so-tela-grande">Último acesso</th><th></th></tr></thead>
+    <tbody>
+    {% for e in espacos %}
+      <tr>
+        <td><a href="{% url 'acesso_editar' e.pk %}">{{ e.nome }}</a><br><small>{{ e.profissional }} · {{ e.dono.email }}</small></td>
+        <td>
+          {% if e.situacao == "ativo" %}<span class="tag tag-ok">Ativo</span>
+          {% elif e.situacao == "vencendo" %}<span class="tag tag-alerta">Vence em {{ e.dias_para_vencer }} dia(s)</span>
+          {% elif e.situacao == "convite" %}<span class="tag tag-roxo">Convite pendente</span>
+          {% elif e.situacao == "vencido" %}<span class="tag tag-erro">Vencido</span>
+          {% else %}<span class="tag tag-erro">Bloqueado</span>{% endif %}
+        </td>
+        <td>{{ e.valido_ate|date:"d/m/Y"|default:"sem vencimento" }}</td>
+        <td class="so-tela-grande">{{ e.plano|default:"—" }}{% if e.valor_mensal %}<br><small>{{ e.valor_mensal|dinheiro }}/mês</small>{% endif %}</td>
+        <td class="num so-tela-grande">{{ e.n_clientes }} cliente(s)<br><small>{{ e.n_agendamentos }} agendamento(s)</small></td>
+        <td class="so-tela-grande">{{ e.dono.last_login|date:"d/m/Y H:i"|default:"nunca entrou" }}</td>
+        <td class="num">
+          <form method="post" action="{% url 'acesso_acao' e.pk 'renovar30' %}" class="inline">{% csrf_token %}
+            <input type="hidden" name="voltar" value="{{ request.get_full_path }}">
+            <button class="btn btn-sec btn-peq" type="submit" title="Estende a validade em 30 dias">+30 dias</button></form>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="7" class="vazio">{% if filtro %}Nenhum acesso nesta situação.{% else %}Nenhum acesso liberado ainda. <a href="{% url 'acesso_novo' %}">Liberar o primeiro</a>{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+<p class="suave" style="font-size:.82rem">Você vê só os acessos e números de uso. Pacientes, fichas, fotos e caixa de cada profissional ficam só com ela (LGPD).</p>
+{% endblock %}

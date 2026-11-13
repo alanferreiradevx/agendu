@@ -16,7 +16,6 @@ from estoque.models import Material
 
 from . import financeiro
 from .forms import CriarSenhaFinanceiroForm, EstudioForm, SenhaFinanceiroForm, TrocarSenhaFinanceiroForm
-from .models import Estudio
 
 
 def painel(request):
@@ -25,30 +24,33 @@ def painel(request):
     inicio_mes = hoje.replace(day=1)
     agora = timezone.now()
 
-    de_hoje = (Agendamento.objects.filter(inicio__date=hoje).exclude(status=Agendamento.CANCELADO)
+    e = request.estudio
+    ags = Agendamento.objects.filter(estudio=e)
+    de_hoje = (ags.filter(inicio__date=hoje).exclude(status=Agendamento.CANCELADO)
                .select_related("cliente", "procedimento").order_by("inicio"))
-    proximos = (Agendamento.objects.filter(inicio__date__gt=hoje, inicio__date__lte=hoje + timedelta(days=6),
+    proximos = (ags.filter(inicio__date__gt=hoje, inicio__date__lte=hoje + timedelta(days=6),
                                            status__in=Agendamento.EM_ABERTO)
                 .select_related("cliente", "procedimento").order_by("inicio"))
-    pendentes = (Agendamento.objects.filter(status__in=Agendamento.EM_ABERTO, fim__lt=agora, inicio__date__lt=hoje)
+    pendentes = (ags.filter(status__in=Agendamento.EM_ABERTO, fim__lt=agora, inicio__date__lt=hoje)
                  .select_related("cliente", "procedimento").order_by("-inicio")[:10])
 
-    do_mes = Agendamento.objects.filter(inicio__date__gte=inicio_mes, inicio__date__lte=hoje)
-    materiais = Material.objects.filter(ativo=True)
+    do_mes = ags.filter(inicio__date__gte=inicio_mes, inicio__date__lte=hoje)
+    materiais = Material.objects.filter(estudio=e, ativo=True)
     return render(request, "core/painel.html", {
         "hoje": hoje, "amanha": hoje + timedelta(days=1), "de_hoje": de_hoje, "proximos": proximos,
         "pendentes": pendentes,
         "concluidos_mes": do_mes.filter(status=Agendamento.CONCLUIDO).count(),
         "faltas_mes": do_mes.filter(status=Agendamento.FALTOU).count(),
-        "pacotes_ativos": sum(1 for p in Pacote.objects.all() if p.restantes and not p.vencido),
+        "pacotes_ativos": sum(1 for p in Pacote.objects.filter(estudio=e) if p.restantes and not p.vencido),
         "alerta_estoque": [m for m in materiais if m.abaixo_do_minimo or m.vencido or m.vencendo],
-        "retornos": retornos(), "aniversariantes": [c for c in aniversariantes() if c.nascimento.day >= hoje.day][:8],
-        "estudio": Estudio.atual(),
+        "retornos": retornos(e),
+        "aniversariantes": [c for c in aniversariantes(e) if c.nascimento.day >= hoje.day][:8],
+        "estudio": e,
     })
 
 
 def configuracoes(request):
-    estudio = Estudio.atual()
+    estudio = request.estudio
     form = EstudioForm(request.POST or None, request.FILES or None, instance=estudio, prefix="estudio")
     if request.method == "POST" and form.is_valid():
         form.save()
@@ -68,7 +70,7 @@ def _destino(request):
 
 def financeiro_entrar(request):
     """Pede a senha do financeiro (ou cria, no primeiro acesso)."""
-    estudio = Estudio.atual()
+    estudio = request.estudio
     destino = _destino(request)
     if financeiro.liberado(request):
         return redirect(destino)
@@ -106,7 +108,7 @@ def financeiro_trancar(request):
 
 @financeiro.financeiro_obrigatorio
 def financeiro_senha(request):
-    estudio = Estudio.atual()
+    estudio = request.estudio
     form = TrocarSenhaFinanceiroForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         if not estudio.confere_senha_financeiro(form.cleaned_data["atual"]):
@@ -119,7 +121,7 @@ def financeiro_senha(request):
 
 
 def logo(request):
-    estudio = Estudio.atual()
+    estudio = request.estudio
     if not estudio.logo:
         raise Http404
     return FileResponse(estudio.logo.open("rb"))
@@ -132,7 +134,7 @@ def busca(request):
     termo = request.GET.get("q", "").strip()
     if not termo:
         return redirect("clientes:lista")
-    achados = Cliente.objects.filter(Q(nome__icontains=termo) | Q(telefone__icontains=termo))
+    achados = Cliente.objects.filter(Q(nome__icontains=termo) | Q(telefone__icontains=termo), estudio=request.estudio)
     if achados.count() == 1:
         return redirect("clientes:detalhe", achados.first().pk)
     return redirect(f"/clientes/?q={termo}")

@@ -1,12 +1,3 @@
-from django.contrib import admin
-
-from .models import Cliente, Evolucao, Ficha, Foto
-
-
-@admin.register(Cliente)
-class ClienteAdmin(admin.ModelAdmin):
-    list_display = ("nome", "telefone", "nascimento", "ativo")
-    search_fields = ("nome", "telefone", "email", "cpf")
-
-
-admin.site.register([Ficha, Evolucao, Foto])
+# Os dados de cada espaço (pacientes, fichas, fotos, agenda, caixa, estoque) NÃO aparecem na
+# Administração do Django: ela mostraria tudo de todos os espaços, e o master não vê os dados
+# das profissionais (LGPD). Cada profissional cuida dos seus pelas telas do sistema.

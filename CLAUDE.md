@@ -1,7 +1,8 @@
 # Agendu (contexto do projeto)
 
 Sistema do Alan para atendimento de **estética**: agenda, clientes (ficha, evolução, fotos), pacotes, caixa,
-faturamento e estoque. **Um usuário só** (a própria profissional). Responda em português do Brasil; Alan está
+faturamento e estoque. **Vários espaços** (desde 13/11/2026): o Alan (master) libera acesso a outras profissionais,
+cada uma com o seu espaço separado. Responda em português do Brasil; Alan está
 aprendendo Python/Django: explique de forma didática e passe comandos prontos para Windows (PowerShell, venv em `.venv`).
 
 Projeto **separado do Ativix** (`C:\Users\mixcom\Downloads\ativix.co-main`), mas no mesmo servidor e com a mesma
@@ -25,13 +26,24 @@ base técnica. Não misturar código, banco nem usuários dos dois.
   (ele converte para inteiro e perde os centavos): calcule na view.
 
 ## Regras de negócio
+- **Espaços (multi-espaço)**: `core.Estudio` é o espaço; `Estudio.dono` (OneToOne User) é a profissional. Todo dado tem
+  `estudio` (Cliente, Procedimento, Pacote, Agendamento, Material, FormaPagamento, Lancamento; Ficha/Evolucao/Foto/
+  ProcedimentoMaterial/Movimento pelo pai). `core/espaco.EspacoMiddleware` põe `request.estudio` e barra bloqueado
+  (`ativo=False`) ou vencido (`valido_ate`). **Toda busca filtra por `request.estudio`** (inclusive `get_object_or_404`
+  e querysets de formulário: os forms recebem `estudio=`) e **toda tela nova ganha teste de isolamento**
+  (`core/tests_espacos.py`). Nomes únicos por espaço (`NomeUnicoNoEspacoMixin`). Espaço novo: `criar_formas_padrao()`.
+- **Master** = `is_superuser` (o Alan, que também tem o próprio espaço). Área **Acessos** (`/acessos/`, `core/master.py`):
+  liberar acesso (cria User sem senha + espaço e mostra link de convite para WhatsApp), bloquear/liberar, renovar
+  +30 dias/+1 ano, plano e valor mensal, link de senha nova (`/convite/<uid>/<token>/`, token do Django, 7 dias, uso
+  único). **O master não vê dados das profissionais** (decisão do Alan, LGPD): a lista mostra só contagens; a
+  Administração do Django só tem `Estudio` (os modelos de dados foram tirados do admin).
 - **Valores só com a senha do financeiro** (pedido do Alan em 12/11/2026; diferente da senha de login, guardada com hash em
   `Estudio.senha_financeiro`). `core/financeiro.py`: `liberado(request)`, `@financeiro_obrigatorio`, `FinanceiroMiddleware`
   (renova a cada página, tranca depois de `FINANCEIRO_MINUTOS`=15 parado, tranca `/admin/`), `{{ financeiro_liberado }}`
   nos templates e `{% valor x %}` (mostra `R$ •••` trancado). Caixa, faturamento, formas/taxas, vender pacote, receber
   pacote e desfazer conclusão exigem a senha. Trancado, os formulários **removem** os campos de valor (agendamento usa o
   preço do procedimento; concluir usa o valor combinado; estoque entra sem custo e sem despesa). **Toda tela nova com
-  dinheiro segue a mesma regra, com teste** (`FinanceiroTrancadoTests`). Esqueceu: `agendu-manage redefinir_senha_financeiro`.
+  dinheiro segue a mesma regra, com teste** (`FinanceiroTrancadoTests`). Esqueceu: `agendu-manage redefinir_senha_financeiro email@da.profissional`.
 - **Como vai pagar / como pagou** (pedido do Alan): `Agendamento.forma_prevista` + `parcelas_previstas` (no agendamento) e o
   `Lancamento.forma` + `parcelas` (na conclusão, já vem marcado com o previsto). Formas em botões e parcelas 2x-12x só se a
   `FormaPagamento.parcelavel`: use `financeiro/pagamento.py` (`preparar`, `campo_parcelas`, `ajustar_parcelas`) e o

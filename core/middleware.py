@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.contrib.auth.views import redirect_to_login
 
-LIVRES = ("/entrar/", "/static/", "/admin/", "/favicon.ico")
+LIVRES = ("/entrar/", "/convite/", "/static/", "/admin/", "/favicon.ico")
 
 
 class LoginObrigatorioMiddleware:

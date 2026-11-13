@@ -13,14 +13,15 @@ class LancamentoForm(forms.ModelForm):
         fields = ["data", "descricao", "categoria", "valor", "forma", "parcelas", "cliente", "observacoes"]
         widgets = {"data": DATA, "valor": DINHEIRO}
 
-    def __init__(self, *args, tipo, **kwargs):
+    def __init__(self, *args, tipo, estudio, **kwargs):
         super().__init__(*args, **kwargs)
         self.instance.tipo = tipo
+        self.instance.estudio = estudio
         entrada = tipo == Lancamento.ENTRADA
         self.fields["categoria"].choices = Lancamento.CATEGORIAS_ENTRADA if entrada else Lancamento.CATEGORIAS_SAIDA
-        pagamento.preparar(self, vazio="Não informar")
+        pagamento.preparar(self, estudio, vazio="Não informar")
         self.fields["forma"].required = False
-        self.fields["cliente"].queryset = Cliente.objects.filter(ativo=True)
+        self.fields["cliente"].queryset = Cliente.objects.filter(estudio=estudio, ativo=True)
         self.fields["cliente"].required = False
         self.fields["valor"].min_value = 0.01
         if entrada:
@@ -44,7 +45,19 @@ class LancamentoForm(forms.ModelForm):
         return lanc
 
 
+class BaseFormasFormSet(forms.BaseModelFormSet):
+    """Nome de forma de pagamento não repete no espaço."""
+
+    def clean(self):
+        super().clean()
+        nomes = [f.cleaned_data.get("nome", "").strip().lower() for f in self.forms
+                 if f.has_changed() or f.instance.pk if hasattr(f, "cleaned_data")]
+        nomes = [n for n in nomes if n]
+        if len(nomes) != len(set(nomes)):
+            raise forms.ValidationError("Há duas formas de pagamento com o mesmo nome.")
+
+
 FormasFormSet = forms.modelformset_factory(
-    FormaPagamento, fields=["nome", "taxa_percentual", "parcelavel", "ordem", "ativo"], extra=1,
+    FormaPagamento, formset=BaseFormasFormSet, fields=["nome", "taxa_percentual", "parcelavel", "ordem", "ativo"], extra=1,
     widgets={"taxa_percentual": forms.NumberInput(attrs={"step": "0.01", "min": "0"})},
 )

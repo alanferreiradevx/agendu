@@ -7,7 +7,6 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from agenda.models import Agendamento
-from core.models import Estudio
 from core.utils import formatar_mensagem
 from financeiro.models import resumo
 
@@ -19,7 +18,7 @@ ABAS = ["resumo", "ficha", "evolucao", "fotos", "agenda", "pacotes", "financeiro
 
 def lista(request):
     termo = request.GET.get("q", "").strip()
-    qs = Cliente.objects.annotate(ultima_visita=Max("agendamentos__inicio",
+    qs = Cliente.objects.filter(estudio=request.estudio).annotate(ultima_visita=Max("agendamentos__inicio",
                                                     filter=Q(agendamentos__status=Agendamento.CONCLUIDO)))
     if termo:
         qs = qs.filter(Q(nome__icontains=termo) | Q(telefone__icontains=termo) | Q(email__icontains=termo)
@@ -31,7 +30,7 @@ def lista(request):
 
 
 def editar(request, pk=None):
-    cliente = get_object_or_404(Cliente, pk=pk) if pk else None
+    cliente = get_object_or_404(Cliente, pk=pk, estudio=request.estudio) if pk else Cliente(estudio=request.estudio)
     form = ClienteForm(request.POST or None, instance=cliente)
     if request.method == "POST" and form.is_valid():
         cliente = form.save()
@@ -40,16 +39,16 @@ def editar(request, pk=None):
         if pk is None:
             return redirect(f"/clientes/{cliente.pk}/?aba=ficha")
         return redirect("clientes:detalhe", cliente.pk)
-    return render(request, "clientes/form.html", {"form": form, "cliente": cliente})
+    return render(request, "clientes/form.html", {"form": form, "cliente": cliente if pk else None})
 
 
 def detalhe(request, pk):
-    cliente = get_object_or_404(Cliente, pk=pk)
+    cliente = get_object_or_404(Cliente, pk=pk, estudio=request.estudio)
     ficha, _ = Ficha.objects.get_or_create(cliente=cliente)
     aba = request.GET.get("aba", "resumo")
     if aba not in ABAS:
         aba = "resumo"
-    estudio = Estudio.atual()
+    estudio = request.estudio
     agora = timezone.now()
     agendamentos = cliente.agendamentos.select_related("procedimento", "pacote").order_by("-inicio")
     proximos = [a for a in agendamentos if a.em_aberto and a.inicio >= agora][::-1]
@@ -79,7 +78,7 @@ def detalhe(request, pk):
 
 @require_POST
 def salvar_ficha(request, pk):
-    cliente = get_object_or_404(Cliente, pk=pk)
+    cliente = get_object_or_404(Cliente, pk=pk, estudio=request.estudio)
     ficha, _ = Ficha.objects.get_or_create(cliente=cliente)
     form = FichaForm(request.POST, instance=ficha)
     if form.is_valid():
@@ -92,7 +91,7 @@ def salvar_ficha(request, pk):
 
 @require_POST
 def nova_evolucao(request, pk):
-    cliente = get_object_or_404(Cliente, pk=pk)
+    cliente = get_object_or_404(Cliente, pk=pk, estudio=request.estudio)
     form = EvolucaoForm(request.POST, request.FILES)
     if form.is_valid():
         evo = form.save(commit=False)
@@ -109,7 +108,7 @@ def nova_evolucao(request, pk):
 
 @require_POST
 def apagar_evolucao(request, pk):
-    evo = get_object_or_404(Evolucao, pk=pk)
+    evo = get_object_or_404(Evolucao, pk=pk, cliente__estudio=request.estudio)
     cliente_id = evo.cliente_id
     evo.delete()  # as fotos continuam na galeria
     messages.success(request, "Evolução apagada (as fotos continuam na galeria).")
@@ -118,7 +117,7 @@ def apagar_evolucao(request, pk):
 
 @require_POST
 def enviar_fotos(request, pk):
-    cliente = get_object_or_404(Cliente, pk=pk)
+    cliente = get_object_or_404(Cliente, pk=pk, estudio=request.estudio)
     form = FotosForm(request.POST, request.FILES)
     if form.is_valid():
         d = form.cleaned_data
@@ -133,7 +132,7 @@ def enviar_fotos(request, pk):
 
 @require_POST
 def apagar_foto(request, pk):
-    foto = get_object_or_404(Foto, pk=pk)
+    foto = get_object_or_404(Foto, pk=pk, cliente__estudio=request.estudio)
     cliente_id = foto.cliente_id
     foto.delete()
     messages.success(request, "Foto apagada.")
@@ -142,7 +141,7 @@ def apagar_foto(request, pk):
 
 def foto_arquivo(request, pk, tamanho="grande"):
     """Entrega a foto só para quem está logado (o middleware garante). Nunca por link público."""
-    foto = get_object_or_404(Foto, pk=pk)
+    foto = get_object_or_404(Foto, pk=pk, cliente__estudio=request.estudio)  # foto de outro espaço = 404
     arquivo = foto.miniatura if tamanho == "mini" and foto.miniatura else foto.imagem
     resposta = FileResponse(arquivo.open("rb"), content_type="image/jpeg")
     resposta["Cache-Control"] = "private, max-age=86400"
@@ -150,7 +149,7 @@ def foto_arquivo(request, pk, tamanho="grande"):
 
 
 def comparar(request, pk):
-    cliente = get_object_or_404(Cliente, pk=pk)
+    cliente = get_object_or_404(Cliente, pk=pk, estudio=request.estudio)
     ids = request.GET.getlist("f")[:2]
     fotos = list(cliente.fotos.filter(pk__in=ids).order_by("data", "pk"))
     if len(fotos) != 2:
@@ -162,9 +161,9 @@ def comparar(request, pk):
 
 def imprimir_ficha(request, pk):
     """Ficha de anamnese + termo de consentimento e de uso de imagem, para imprimir e assinar."""
-    cliente = get_object_or_404(Cliente, pk=pk)
+    cliente = get_object_or_404(Cliente, pk=pk, estudio=request.estudio)
     ficha, _ = Ficha.objects.get_or_create(cliente=cliente)
     return render(request, "clientes/imprimir_ficha.html", {
-        "cliente": cliente, "ficha": ficha, "estudio": Estudio.atual(), "hoje": timezone.localdate(),
+        "cliente": cliente, "ficha": ficha, "estudio": request.estudio, "hoje": timezone.localdate(),
     })
 

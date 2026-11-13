@@ -50,6 +50,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "core.middleware.LoginObrigatorioMiddleware",
+    "core.espaco.EspacoMiddleware",
     "core.financeiro.FinanceiroMiddleware",
 ]
 
@@ -67,6 +68,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "core.financeiro.contexto",
+                "core.espaco.contexto",
             ],
         },
     },
@@ -104,6 +106,9 @@ CACHES = {
 
 # Entra pelo e-mail (core/backends.py), não pelo nome de usuário.
 AUTHENTICATION_BACKENDS = ["core.backends.EmailBackend"]
+
+# Convite e "redefinir senha": o link vale por 7 dias.
+PASSWORD_RESET_TIMEOUT = 7 * 24 * 60 * 60
 
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "painel"

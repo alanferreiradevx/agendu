@@ -14,7 +14,7 @@ class ComoPagaTests(Base):
 
     def setUp(self):
         super().setUp()
-        self.parcelado = FormaPagamento.objects.get(nome="Cartão de crédito parcelado")
+        self.parcelado = FormaPagamento.objects.get(estudio=self.estudio, nome="Cartão de crédito parcelado")
         self.dados = {"cliente": self.cliente.pk, "procedimento": self.peeling.pk, "duracao": 60, "valor": "200",
                       "data": timezone.localdate() + timedelta(days=1), "hora": "10:00"}
 

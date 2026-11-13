@@ -1,0 +1,68 @@
+{% extends "base.html" %}{% load agendu %}
+{% block titulo %}{% if estudio %}{{ estudio }}{% else %}Novo acesso{% endif %}{% endblock %}
+{% block conteudo %}
+<p style="margin:0 0 8px"><a href="{% url 'acessos' %}">← Acessos</a></p>
+<div class="cabecalho">
+  <div>
+    <h1>{% if estudio %}{{ estudio }}{% else %}Liberar novo acesso{% endif %}</h1>
+    {% if estudio %}<p class="suave" style="margin:0">{{ estudio.profissional }} · {{ estudio.dono.email }} ·
+      {% if estudio.situacao == "ativo" %}<span class="tag tag-ok">Ativo</span>{% elif estudio.situacao == "vencendo" %}<span class="tag tag-alerta">Vence em {{ estudio.dias_para_vencer }} dia(s)</span>{% elif estudio.situacao == "convite" %}<span class="tag tag-roxo">Convite pendente</span>{% elif estudio.situacao == "vencido" %}<span class="tag tag-erro">Vencido</span>{% else %}<span class="tag tag-erro">Bloqueado</span>{% endif %}
+    </p>{% else %}<p class="suave" style="margin:0">A profissional recebe um link para criar a senha e ganha um espaço próprio, vazio.</p>{% endif %}
+  </div>
+</div>
+
+{% if envio %}
+<div class="card aviso-ok">
+  <h2><svg class="ico"><use href="#i-whats"/></svg>{% if tipo_link == "convite" %}Link do convite{% else %}Link para criar senha nova{% endif %}</h2>
+  <p style="margin-top:0">Mande para {{ estudio.profissional }}. O link vale por <strong>7 dias</strong> e só funciona uma vez.</p>
+  <textarea id="msg-link" rows="4" readonly style="font-size:.9rem">{{ envio.texto }}</textarea>
+  <div class="acoes" style="margin-top:10px">
+    {% if envio.whatsapp %}<a class="btn btn-whats" href="{{ envio.whatsapp }}" target="_blank" rel="noopener"><svg class="ico"><use href="#i-whats"/></svg>Enviar pelo WhatsApp</a>{% endif %}
+    <button class="btn btn-sec" type="button" onclick="navigator.clipboard.writeText(document.getElementById('msg-link').value).then(function(){this.textContent='Copiado!'}.bind(this))">Copiar mensagem</button>
+  </div>
+  {% if not envio.whatsapp %}<p class="suave" style="font-size:.82rem;margin-bottom:0">Sem WhatsApp cadastrado: copie a mensagem e envie como preferir.</p>{% endif %}
+</div>
+{% endif %}
+
+{% if estudio %}
+<div class="card">
+  <h2>Ações rápidas</h2>
+  <div class="acoes">
+    {% if estudio.ativo %}
+      <form method="post" action="{% url 'acesso_acao' estudio.pk 'bloquear' %}" class="inline" onsubmit="return confirm('Bloquear o acesso de {{ estudio.profissional|escapejs }}? Ela não consegue entrar até você liberar. Os dados ficam guardados.')">{% csrf_token %}
+        <button class="btn btn-perigo" type="submit">Bloquear acesso</button></form>
+    {% else %}
+      <form method="post" action="{% url 'acesso_acao' estudio.pk 'liberar' %}" class="inline">{% csrf_token %}
+        <button class="btn btn-ok" type="submit">Liberar acesso</button></form>
+    {% endif %}
+    <form method="post" action="{% url 'acesso_acao' estudio.pk 'renovar30' %}" class="inline">{% csrf_token %}
+      <button class="btn btn-sec" type="submit">Renovar +30 dias</button></form>
+    <form method="post" action="{% url 'acesso_acao' estudio.pk 'renovar365' %}" class="inline">{% csrf_token %}
+      <button class="btn btn-sec" type="submit">Renovar +1 ano</button></form>
+    <form method="post" action="{% url 'acesso_acao' estudio.pk 'senha' %}" class="inline">{% csrf_token %}
+      <button class="btn btn-sec" type="submit">{% if estudio.convite_pendente %}Gerar link do convite de novo{% else %}Gerar link de senha nova{% endif %}</button></form>
+  </div>
+  <p class="suave" style="font-size:.82rem;margin-bottom:0">
+    {% if estudio.dono.last_login %}Último acesso: {{ estudio.dono.last_login|date:"d/m/Y H:i" }}.{% else %}Ainda não entrou.{% endif %}
+    Acesso criado em {{ estudio.criado_em|date:"d/m/Y" }}.
+  </p>
+</div>
+{% endif %}
+
+<form method="post" class="card">{% csrf_token %}
+  <h2>Dados do acesso</h2>
+  {% if form.non_field_errors %}<div class="erros-gerais">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <div class="form-grid">
+    {% include "_campo.html" with campo=form.nome %}
+    {% include "_campo.html" with campo=form.profissional %}
+    {% include "_campo.html" with campo=form.email %}
+    {% include "_campo.html" with campo=form.telefone %}
+    {% include "_campo.html" with campo=form.plano %}
+    {% include "_campo.html" with campo=form.valor_mensal %}
+    {% include "_campo.html" with campo=form.valido_ate %}
+    {% include "_campo.html" with campo=form.ativo %}
+    {% include "_campo.html" with campo=form.anotacoes largo=True %}
+  </div>
+  <div class="botoes-form"><button class="btn" type="submit">{% if estudio %}Salvar{% else %}Criar acesso e gerar convite{% endif %}</button></div>
+</form>
+{% endblock %}

@@ -15,12 +15,12 @@ def campo_parcelas(label="Parcelado em"):
     return forms.TypedChoiceField(label=label, choices=PARCELAS, coerce=int, required=False, empty_value=1)
 
 
-def preparar(form, forma="forma", vazio=None):
-    """Troca a lista suspensa por botões e guarda quais formas são parceladas (para o JavaScript)."""
+def preparar(form, estudio, forma="forma", vazio=None):
+    """Troca a lista suspensa por botões (só as formas do espaço) e guarda quais são parceladas (para o JS)."""
     campo = form.fields[forma]
     campo.widget = forms.RadioSelect()
     campo.empty_label = vazio  # None: sem a opção vazia
-    campo.queryset = FormaPagamento.objects.filter(ativo=True)
+    campo.queryset = FormaPagamento.objects.filter(estudio=estudio, ativo=True)
     form.parcelaveis = ",".join(str(pk) for pk in campo.queryset.filter(parcelavel=True).values_list("pk", flat=True))
 
 

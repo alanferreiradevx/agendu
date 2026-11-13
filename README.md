@@ -1,7 +1,7 @@
 # Agendu
 
-Agenda, clientes, caixa e estoque para quem atende estética. Feito para uma
-profissional (um login), usado principalmente pelo celular.
+Agenda, clientes, caixa e estoque para quem atende estética, usado principalmente pelo celular.
+Você (master) libera o acesso de outras profissionais: cada uma tem o próprio espaço, separado.
 
 Endereço: **https://agendu.ativix.co** (mesmo servidor do Ativix, mas separado:
 outra pasta, outro banco, outro serviço).
@@ -44,7 +44,11 @@ outra pasta, outro banco, outro serviço).
   estoque, valores de pacotes e atendimentos) fica trancado atrás de uma senha separada da de login.
   Tranca sozinho depois de 15 minutos sem usar, ou no botão "Trancar". Trancado, dá para agendar e
   concluir atendimentos normalmente (o valor usado é o do procedimento, sem aparecer na tela).
-  Esqueceu a senha: `agendu-manage redefinir_senha_financeiro` no servidor.
+  Esqueceu a senha: `agendu-manage redefinir_senha_financeiro email@da.profissional` no servidor.
+
+- **Acessos** (só o master): liberar acesso para uma profissional (ela recebe um link pelo WhatsApp e cria a
+  própria senha), bloquear/liberar, renovar +30 dias ou +1 ano, plano e valor mensal, link de senha nova.
+  Acesso vencido ou bloqueado não entra (os dados ficam guardados). Você não vê os dados das profissionais.
 
 ## Rodar no computador (Windows)
 

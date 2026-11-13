@@ -14,21 +14,23 @@ from .models import Material, Movimento, movimentar
 
 
 def lista(request):
-    materiais = list(Material.objects.filter(ativo=True))
+    materiais = list(Material.objects.filter(estudio=request.estudio, ativo=True))
     alerta = request.GET.get("filtro") == "alerta"
     if alerta:
         materiais = [m for m in materiais if m.abaixo_do_minimo or m.vencido or m.vencendo]
     total = sum((m.valor_em_estoque for m in materiais), Decimal(0))
-    inativos = Material.objects.filter(ativo=False).count()
+    inativos = Material.objects.filter(estudio=request.estudio, ativo=False).count()
     return render(request, "estoque/lista.html", {"materiais": materiais, "total": total, "alerta": alerta,
                                                   "inativos": inativos})
 
 
 def editar(request, pk=None):
-    material = get_object_or_404(Material, pk=pk) if pk else None
+    material = (get_object_or_404(Material, pk=pk, estudio=request.estudio) if pk
+                else Material(estudio=request.estudio))
     aberto = liberado(request)
     form = MaterialForm(request.POST or None, instance=material, financeiro=aberto)
-    entrada = EntradaForm(request.POST or None, prefix="entrada", financeiro=aberto) if not pk else None
+    entrada = (EntradaForm(request.POST or None, prefix="entrada", financeiro=aberto, estudio=request.estudio)
+               if not pk else None)
     if request.method == "POST" and form.is_valid() and (entrada is None or not entrada.has_changed() or entrada.is_valid()):
         with transaction.atomic():
             material = form.save()
@@ -36,7 +38,7 @@ def editar(request, pk=None):
                 _registrar_entrada(material, entrada.cleaned_data)
         messages.success(request, f"{material} salvo.")
         return redirect("estoque:detalhe", material.pk)
-    return render(request, "estoque/form.html", {"form": form, "entrada": entrada, "material": material})
+    return render(request, "estoque/form.html", {"form": form, "entrada": entrada, "material": material if pk else None})
 
 
 def _registrar_entrada(material, d):
@@ -48,20 +50,20 @@ def _registrar_entrada(material, d):
         material.save(update_fields=["validade"])
     if total and d.get("lancar_despesa"):
         Lancamento.objects.create(
-            tipo=Lancamento.SAIDA, categoria="material", valor=centavos(total), forma=d.get("forma"),
+            estudio=material.estudio, tipo=Lancamento.SAIDA, categoria="material", valor=centavos(total), forma=d.get("forma"),
             descricao=f"Compra: {material} ({qtd:g} {material.unidade})", data=timezone.localdate(),
             observacoes=d.get("descricao") or "",
         )
 
 
 def detalhe(request, pk):
-    material = get_object_or_404(Material, pk=pk)
+    material = get_object_or_404(Material, pk=pk, estudio=request.estudio)
     aberto = liberado(request)
-    entrada = EntradaForm(prefix="entrada", financeiro=aberto)
+    entrada = EntradaForm(prefix="entrada", financeiro=aberto, estudio=request.estudio)
     ajuste = AjusteForm(prefix="ajuste", initial={"saldo_real": material.quantidade})
     if request.method == "POST":
         if "entrada-quantidade" in request.POST:
-            entrada = EntradaForm(request.POST, prefix="entrada", financeiro=aberto)
+            entrada = EntradaForm(request.POST, prefix="entrada", financeiro=aberto, estudio=request.estudio)
             if entrada.is_valid():
                 with transaction.atomic():
                     _registrar_entrada(material, entrada.cleaned_data)

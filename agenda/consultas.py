@@ -9,7 +9,7 @@ from clientes.models import Cliente
 from .models import Agendamento
 
 
-def retornos(antecedencia_dias=7, atraso_max_dias=90):
+def retornos(estudio, antecedencia_dias=7, atraso_max_dias=90):
     """
     Clientes que estão na hora (ou perto) de voltar, pelo "retorno em (dias)" do
     último procedimento feito. Some da lista quando ela já tem horário marcado.
@@ -17,11 +17,11 @@ def retornos(antecedencia_dias=7, atraso_max_dias=90):
     hoje = timezone.localdate()
     agora = timezone.now()
     com_horario = set(
-        Agendamento.objects.filter(status__in=Agendamento.EM_ABERTO, inicio__gte=agora)
+        Agendamento.objects.filter(estudio=estudio, status__in=Agendamento.EM_ABERTO, inicio__gte=agora)
         .values_list("cliente_id", flat=True)
     )
     vistos, lista = set(), []
-    feitos = (Agendamento.objects.filter(status=Agendamento.CONCLUIDO, procedimento__retorno_dias__isnull=False,
+    feitos = (Agendamento.objects.filter(estudio=estudio, status=Agendamento.CONCLUIDO, procedimento__retorno_dias__isnull=False,
                                          cliente__ativo=True)
               .select_related("cliente", "procedimento").order_by("-inicio"))
     for ag in feitos:
@@ -37,7 +37,7 @@ def retornos(antecedencia_dias=7, atraso_max_dias=90):
     return sorted(lista, key=lambda r: r["data"])
 
 
-def aniversariantes(mes=None):
+def aniversariantes(estudio, mes=None):
     mes = mes or timezone.localdate().month
-    lista = list(Cliente.objects.filter(ativo=True, nascimento__month=mes))
+    lista = list(Cliente.objects.filter(estudio=estudio, ativo=True, nascimento__month=mes))
     return sorted(lista, key=lambda c: c.nascimento.day)

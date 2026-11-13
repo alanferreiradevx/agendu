@@ -8,7 +8,6 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from core.financeiro import financeiro_obrigatorio, liberado, url_desbloquear
-from core.models import Estudio
 from core.utils import formatar_mensagem
 
 from . import servicos
@@ -57,13 +56,13 @@ def semana(request):
     dias = [dia] if modo == "dia" else semana_dias
 
     inicio = timezone.make_aware(datetime.combine(segunda, time.min))
-    ags = list(Agendamento.objects.filter(inicio__gte=inicio, inicio__lt=inicio + timedelta(days=7))
+    ags = list(Agendamento.objects.filter(estudio=request.estudio, inicio__gte=inicio, inicio__lt=inicio + timedelta(days=7))
                .select_related("cliente", "procedimento").order_by("inicio"))
     if request.GET.get("cancelados") != "1":
         ags = [a for a in ags if a.status != Agendamento.CANCELADO]
 
     # Faixa de horas: o expediente, esticado se algum atendimento cair fora dele.
-    estudio = Estudio.atual()
+    estudio = request.estudio
     h_ini, h_fim = estudio.hora_abre.hour, estudio.hora_fecha.hour + (1 if estudio.hora_fecha.minute else 0)
     por_dia = {d: [] for d in semana_dias}
     for a in ags:
@@ -104,28 +103,28 @@ def semana(request):
 
 
 def editar(request, pk=None):
-    ag = get_object_or_404(Agendamento, pk=pk) if pk else Agendamento()
+    estudio = request.estudio
+    ag = get_object_or_404(Agendamento, pk=pk, estudio=estudio) if pk else Agendamento(estudio=estudio)
     if ag.status == Agendamento.CONCLUIDO:
         messages.error(request, "Atendimento concluído não se edita. Desfaça a conclusão antes, se precisar.")
         return redirect("agenda:detalhe", ag.pk)
     inicial = {}
     if not pk:
-        estudio = Estudio.atual()
         inicial["data"] = _data(request.GET.get("data"), timezone.localdate())
         inicial["hora"] = request.GET.get("hora") or estudio.hora_abre.strftime("%H:%M")
         inicial["duracao"] = 60
         if request.GET.get("cliente"):
             inicial["cliente"] = request.GET["cliente"]
         if request.GET.get("procedimento"):
-            proc = Procedimento.objects.filter(pk=request.GET["procedimento"]).first()
+            proc = Procedimento.objects.filter(estudio=estudio, pk=request.GET["procedimento"]).first()
             if proc:
                 inicial.update(procedimento=proc.pk, duracao=proc.duracao_min, valor=proc.preco)
         if request.GET.get("pacote"):
-            pac = Pacote.objects.filter(pk=request.GET["pacote"]).first()
+            pac = Pacote.objects.filter(estudio=estudio, pk=request.GET["pacote"]).first()
             if pac:
                 inicial.update(pacote=pac.pk, cliente=pac.cliente_id, procedimento=pac.procedimento_id,
                                duracao=pac.procedimento.duracao_min, valor=0)
-    form = AgendamentoForm(request.POST or None, instance=ag if pk else None, initial=inicial,
+    form = AgendamentoForm(request.POST or None, instance=ag, initial=inicial, estudio=estudio,
                            financeiro=liberado(request))
     if request.method == "POST" and form.is_valid():
         ag = form.save()
@@ -135,8 +134,9 @@ def editar(request, pk=None):
 
 
 def detalhe(request, pk):
-    ag = get_object_or_404(Agendamento.objects.select_related("cliente", "procedimento", "pacote"), pk=pk)
-    estudio = Estudio.atual()
+    ag = get_object_or_404(Agendamento.objects.select_related("cliente", "procedimento", "pacote"), pk=pk,
+                           estudio=request.estudio)
+    estudio = request.estudio
     inicio = timezone.localtime(ag.inicio)
     hoje = timezone.localdate()
     if inicio.date() == hoje:
@@ -166,7 +166,7 @@ def detalhe(request, pk):
 @require_POST
 def forma_prevista(request, pk):
     """Salva a forma de pagamento escolhida na página do atendimento."""
-    ag = get_object_or_404(Agendamento, pk=pk)
+    ag = get_object_or_404(Agendamento, pk=pk, estudio=request.estudio)
     if not ag.em_aberto:
         messages.error(request, "Este atendimento já foi fechado.")
         return redirect("agenda:detalhe", pk)
@@ -181,7 +181,7 @@ def forma_prevista(request, pk):
 
 @require_POST
 def mudar_status(request, pk, status):
-    ag = get_object_or_404(Agendamento, pk=pk)
+    ag = get_object_or_404(Agendamento, pk=pk, estudio=request.estudio)
     permitidos = {Agendamento.CONFIRMADO, Agendamento.FALTOU, Agendamento.CANCELADO, Agendamento.AGENDADO}
     if status not in permitidos or ag.status == Agendamento.CONCLUIDO:
         messages.error(request, "Mudança não permitida.")
@@ -196,7 +196,7 @@ def mudar_status(request, pk, status):
 
 
 def concluir(request, pk):
-    ag = get_object_or_404(Agendamento.objects.select_related("cliente", "procedimento"), pk=pk)
+    ag = get_object_or_404(Agendamento.objects.select_related("cliente", "procedimento"), pk=pk, estudio=request.estudio)
     if not ag.em_aberto and ag.status != Agendamento.FALTOU:
         messages.error(request, "Este atendimento não pode ser concluído.")
         return redirect("agenda:detalhe", pk)
@@ -219,7 +219,7 @@ def concluir(request, pk):
 @require_POST
 @financeiro_obrigatorio
 def desfazer(request, pk):
-    ag = get_object_or_404(Agendamento, pk=pk)
+    ag = get_object_or_404(Agendamento, pk=pk, estudio=request.estudio)
     try:
         servicos.desfazer_conclusao(ag)
         messages.success(request, "Conclusão desfeita: materiais voltaram ao estoque e a entrada saiu do caixa.")
@@ -230,7 +230,7 @@ def desfazer(request, pk):
 
 @require_POST
 def apagar(request, pk):
-    ag = get_object_or_404(Agendamento, pk=pk)
+    ag = get_object_or_404(Agendamento, pk=pk, estudio=request.estudio)
     if ag.status == Agendamento.CONCLUIDO:
         messages.error(request, "Atendimento concluído não se apaga (está no caixa e no estoque). Desfaça antes.")
         return redirect("agenda:detalhe", pk)
@@ -243,14 +243,16 @@ def apagar(request, pk):
 # ----- Procedimentos ---------------------------------------------------------
 
 def procedimentos(request):
-    procs = Procedimento.objects.prefetch_related("materiais__material")
+    procs = Procedimento.objects.filter(estudio=request.estudio).prefetch_related("materiais__material")
     return render(request, "agenda/procedimentos.html", {"procedimentos": procs})
 
 
 def procedimento_editar(request, pk=None):
-    proc = get_object_or_404(Procedimento, pk=pk) if pk else Procedimento()
+    proc = (get_object_or_404(Procedimento, pk=pk, estudio=request.estudio) if pk
+            else Procedimento(estudio=request.estudio))
     form = ProcedimentoForm(request.POST or None, instance=proc, financeiro=liberado(request))
-    materiais = MateriaisFormSet(request.POST or None, instance=proc, prefix="mat")
+    materiais = MateriaisFormSet(request.POST or None, instance=proc, prefix="mat",
+                                 form_kwargs={"estudio": request.estudio})
     if request.method == "POST" and form.is_valid() and materiais.is_valid():
         with transaction.atomic():
             proc = form.save()
@@ -264,7 +266,7 @@ def procedimento_editar(request, pk=None):
 # ----- Pacotes ---------------------------------------------------------------
 
 def pacotes(request):
-    todos = Pacote.objects.select_related("cliente", "procedimento").prefetch_related("lancamentos", "agendamentos")
+    todos = Pacote.objects.filter(estudio=request.estudio).select_related("cliente", "procedimento").prefetch_related("lancamentos", "agendamentos")
     ativos = [p for p in todos if p.restantes > 0 and not p.vencido]
     encerrados = [p for p in todos if p not in ativos]
     return render(request, "agenda/pacotes.html", {"ativos": ativos, "encerrados": encerrados[:50]})
@@ -275,7 +277,7 @@ def pacote_novo(request):
     inicial = {}
     if request.GET.get("cliente"):
         inicial["cliente"] = request.GET["cliente"]
-    form = PacoteForm(request.POST or None, initial=inicial)
+    form = PacoteForm(request.POST or None, initial=inicial, estudio=request.estudio)
     if request.method == "POST" and form.is_valid():
         d = form.cleaned_data
         pacote = servicos.vender_pacote(form.save(commit=False), forma=d["forma"],
@@ -287,10 +289,10 @@ def pacote_novo(request):
 
 
 def pacote(request, pk):
-    p = get_object_or_404(Pacote.objects.select_related("cliente", "procedimento"), pk=pk)
+    p = get_object_or_404(Pacote.objects.select_related("cliente", "procedimento"), pk=pk, estudio=request.estudio)
     if request.method == "POST" and not liberado(request):
         return redirect(url_desbloquear(request))
-    form = ReceberForm(request.POST or None, initial={"valor": p.a_receber})
+    form = ReceberForm(request.POST or None, initial={"valor": p.a_receber}, estudio=request.estudio)
     if request.method == "POST" and form.is_valid():
         d = form.cleaned_data
         servicos.receber_pacote(p, valor=d["valor"], forma=d["forma"], parcelas=d["parcelas"])

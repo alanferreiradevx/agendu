@@ -13,7 +13,7 @@ from agenda.models import Agendamento
 from core.financeiro import financeiro_obrigatorio
 
 from .forms import FormasFormSet, LancamentoForm
-from .models import Lancamento, resumo
+from .models import FormaPagamento, Lancamento, resumo
 
 MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro",
          "novembro", "dezembro"]
@@ -40,7 +40,7 @@ def _navegacao(inicio, proximo):
 @financeiro_obrigatorio
 def caixa(request):
     inicio, proximo = _mes(request)
-    qs = Lancamento.objects.filter(data__gte=inicio, data__lt=proximo).select_related("forma", "cliente")
+    qs = Lancamento.objects.filter(estudio=request.estudio, data__gte=inicio, data__lt=proximo).select_related("forma", "cliente")
     tipo = request.GET.get("tipo")
     lista = qs.filter(tipo=tipo) if tipo in (Lancamento.ENTRADA, Lancamento.SAIDA) else qs
     if request.GET.get("csv"):
@@ -70,12 +70,12 @@ def _csv(qs, inicio):
 
 @financeiro_obrigatorio
 def lancamento(request, tipo, pk=None):
-    lanc = get_object_or_404(Lancamento, pk=pk) if pk else None
+    lanc = get_object_or_404(Lancamento, pk=pk, estudio=request.estudio) if pk else None
     if lanc:
         tipo = lanc.tipo
     if tipo not in (Lancamento.ENTRADA, Lancamento.SAIDA):
         return redirect("financeiro:caixa")
-    form = LancamentoForm(request.POST or None, instance=lanc, tipo=tipo,
+    form = LancamentoForm(request.POST or None, instance=lanc, tipo=tipo, estudio=request.estudio,
                           initial={"data": timezone.localdate()} if not lanc else None)
     if request.method == "POST" and form.is_valid():
         l = form.save()
@@ -87,7 +87,7 @@ def lancamento(request, tipo, pk=None):
 @require_POST
 @financeiro_obrigatorio
 def apagar(request, pk):
-    lanc = get_object_or_404(Lancamento, pk=pk)
+    lanc = get_object_or_404(Lancamento, pk=pk, estudio=request.estudio)
     if lanc.agendamento_id and lanc.categoria == "atendimento":
         messages.error(request, "Essa entrada é de um atendimento: use \"desfazer conclusão\" no atendimento.")
         return redirect("financeiro:caixa")
@@ -101,7 +101,8 @@ def apagar(request, pk):
 def faturamento(request):
     """Quanto cada procedimento rendeu no mês, quanto gastou de material e o que sobrou."""
     inicio, proximo = _mes(request)
-    feitos = (Agendamento.objects.filter(status=Agendamento.CONCLUIDO, inicio__date__gte=inicio,
+    e = request.estudio
+    feitos = (Agendamento.objects.filter(estudio=e, status=Agendamento.CONCLUIDO, inicio__date__gte=inicio,
                                          inicio__date__lt=proximo)
               .select_related("procedimento", "pacote").prefetch_related("lancamentos"))
     linhas = {}
@@ -122,7 +123,7 @@ def faturamento(request):
         l["ticket"] = l["receita"] / l["qtd"] if l["qtd"] else 0
     linhas = sorted(linhas.values(), key=lambda l: -l["receita"])
 
-    qs = Lancamento.objects.filter(data__gte=inicio, data__lt=proximo)
+    qs = Lancamento.objects.filter(estudio=e, data__gte=inicio, data__lt=proximo)
     formas = defaultdict(lambda: {"valor": Decimal(0), "taxa": Decimal(0), "qtd": 0})
     for l in qs.filter(tipo=Lancamento.ENTRADA).select_related("forma"):
         f = formas[str(l.forma or "Sem forma")]
@@ -135,9 +136,9 @@ def faturamento(request):
     ref = inicio
     for _ in range(6):
         prox = date(ref.year + ref.month // 12, ref.month % 12 + 1, 1)
-        r = resumo(Lancamento.objects.filter(data__gte=ref, data__lt=prox))
+        r = resumo(Lancamento.objects.filter(estudio=e, data__gte=ref, data__lt=prox))
         r["nome"] = f"{MESES[ref.month - 1][:3]}/{ref:%y}"
-        r["atendimentos"] = Agendamento.objects.filter(status=Agendamento.CONCLUIDO, inicio__date__gte=ref,
+        r["atendimentos"] = Agendamento.objects.filter(estudio=e, status=Agendamento.CONCLUIDO, inicio__date__gte=ref,
                                                        inicio__date__lt=prox).count()
         historico.append(r)
         ref = date(ref.year - (ref.month == 1), (ref.month - 2) % 12 + 1, 1)
@@ -148,7 +149,7 @@ def faturamento(request):
     return render(request, "financeiro/faturamento.html", {
         "linhas": linhas, "r": resumo(qs), "formas": sorted(formas.items(), key=lambda x: -x[1]["valor"]),
         "historico": historico[::-1], "atendimentos": len(feitos),
-        "faltas": Agendamento.objects.filter(status=Agendamento.FALTOU, inicio__date__gte=inicio,
+        "faltas": Agendamento.objects.filter(estudio=e, status=Agendamento.FALTOU, inicio__date__gte=inicio,
                                              inicio__date__lt=proximo).count(),
         **_navegacao(inicio, proximo),
     })
@@ -157,9 +158,12 @@ def faturamento(request):
 @financeiro_obrigatorio
 def formas(request):
     """Formas de pagamento e a taxa de cada uma (maquininha, banco)."""
-    conjunto = FormasFormSet(request.POST or None, prefix="formas")
+    conjunto = FormasFormSet(request.POST or None, prefix="formas",
+                             queryset=FormaPagamento.objects.filter(estudio=request.estudio))
     if request.method == "POST" and conjunto.is_valid():
-        conjunto.save()
+        for forma in conjunto.save(commit=False):
+            forma.estudio = request.estudio
+            forma.save()
         messages.success(request, "Formas de pagamento salvas.")
         return redirect("financeiro:formas")
     return render(request, "financeiro/formas.html", {"formas": conjunto})

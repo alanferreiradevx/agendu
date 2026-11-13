@@ -1,12 +1,13 @@
 from django import forms
 
+from agenda.forms import NomeUnicoNoEspacoMixin
 from core.campos import DATA, DINHEIRO, QUANTIDADE
 from financeiro.models import FormaPagamento
 
 from .models import Material
 
 
-class MaterialForm(forms.ModelForm):
+class MaterialForm(NomeUnicoNoEspacoMixin, forms.ModelForm):
     class Meta:
         model = Material
         fields = ["nome", "unidade", "estoque_minimo", "custo_unitario", "validade", "fornecedor", "observacoes", "ativo"]
@@ -36,9 +37,9 @@ class EntradaForm(forms.Form):
     descricao = forms.CharField(label="Observação", max_length=150, required=False,
                                 widget=forms.TextInput(attrs={"placeholder": "fornecedor, nota..."}))
 
-    def __init__(self, *args, financeiro=True, **kwargs):
+    def __init__(self, *args, estudio, financeiro=True, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["forma"].queryset = FormaPagamento.objects.filter(ativo=True)
+        self.fields["forma"].queryset = FormaPagamento.objects.filter(estudio=estudio, ativo=True)
         if not financeiro:  # trancado: registra só a quantidade (o custo médio não muda)
             for campo in ("valor_total", "lancar_despesa", "forma"):
                 del self.fields[campo]

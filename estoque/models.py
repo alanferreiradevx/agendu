@@ -11,7 +11,8 @@ class Material(models.Model):
         ("pct", "pacote"), ("par", "par"), ("amp", "ampola"), ("m", "metro"),
     ]
 
-    nome = models.CharField(max_length=120, unique=True)
+    estudio = models.ForeignKey("core.Estudio", on_delete=models.CASCADE, related_name="materiais", verbose_name="espaço")
+    nome = models.CharField(max_length=120)
     unidade = models.CharField(max_length=4, choices=UNIDADES, default="un",
                                help_text="Como você conta este material ao usar (ml, g, unidade...).")
     quantidade = models.DecimalField("quantidade em estoque", max_digits=12, decimal_places=3, default=0)
@@ -27,6 +28,7 @@ class Material(models.Model):
     class Meta:
         ordering = ["nome"]
         verbose_name_plural = "materiais"
+        constraints = [models.UniqueConstraint(fields=["estudio", "nome"], name="material_nome_por_espaco")]
 
     def __str__(self):
         return self.nome

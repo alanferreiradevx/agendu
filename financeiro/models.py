@@ -8,7 +8,8 @@ from core.utils import centavos
 
 
 class FormaPagamento(models.Model):
-    nome = models.CharField(max_length=60, unique=True)
+    estudio = models.ForeignKey("core.Estudio", on_delete=models.CASCADE, related_name="formas_pagamento", verbose_name="espaço")
+    nome = models.CharField(max_length=60)
     taxa_percentual = models.DecimalField("taxa (%)", max_digits=5, decimal_places=2, default=0,
                                           help_text="Taxa da maquininha/banco. Ex.: 3,49 para o crédito.")
     parcelavel = models.BooleanField("parcelado", default=False,
@@ -20,6 +21,7 @@ class FormaPagamento(models.Model):
         ordering = ["ordem", "nome"]
         verbose_name = "forma de pagamento"
         verbose_name_plural = "formas de pagamento"
+        constraints = [models.UniqueConstraint(fields=["estudio", "nome"], name="forma_nome_por_espaco")]
 
     def __str__(self):
         return self.nome
@@ -44,6 +46,7 @@ class Lancamento(models.Model):
     ]
     CATEGORIAS = CATEGORIAS_ENTRADA + CATEGORIAS_SAIDA
 
+    estudio = models.ForeignKey("core.Estudio", on_delete=models.CASCADE, related_name="lancamentos", verbose_name="espaço")
     tipo = models.CharField(max_length=8, choices=TIPOS)
     data = models.DateField(default=timezone.localdate)
     descricao = models.CharField("descrição", max_length=200)
@@ -68,6 +71,13 @@ class Lancamento(models.Model):
 
     def __str__(self):
         return f"{self.get_tipo_display()} {self.valor} - {self.descricao}"
+
+    def save(self, *args, **kwargs):
+        if not self.estudio_id:
+            origem = self.cliente or self.agendamento or self.pacote
+            if origem is not None:
+                self.estudio_id = origem.estudio_id
+        super().save(*args, **kwargs)
 
     @property
     def liquido(self):

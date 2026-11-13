@@ -15,6 +15,7 @@ UF_CHOICES = [(uf, uf) for uf in (
 
 
 class Cliente(models.Model):
+    estudio = models.ForeignKey("core.Estudio", on_delete=models.CASCADE, related_name="clientes", verbose_name="espaço")
     nome = models.CharField(max_length=150)
     telefone = models.CharField("WhatsApp / telefone", max_length=20, blank=True)
     email = models.EmailField("e-mail", blank=True)

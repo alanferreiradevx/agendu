@@ -17,7 +17,7 @@ from django.utils import timezone
 from agenda import servicos
 from agenda.models import Agendamento, Pacote, Procedimento, ProcedimentoMaterial
 from clientes.models import Cliente, Ficha
-from core.models import Estudio
+from core.models import estudio_do_usuario
 from estoque.models import Material, movimentar
 from financeiro.models import FormaPagamento, Lancamento
 
@@ -29,10 +29,10 @@ class Command(BaseCommand):
         if not settings.DEBUG:
             raise CommandError("Só em desenvolvimento (DJANGO_DEBUG=true).")
         User = get_user_model()
-        if not User.objects.filter(username="demo").exists():
-            User.objects.create_superuser("demo", "demo@agendu.local", "Agendu#2026")
+        demo = User.objects.filter(username="demo").first() or User.objects.create_superuser(
+            "demo", "demo@agendu.local", "Agendu#2026")
 
-        e = Estudio.atual()
+        e = estudio_do_usuario(demo)
         e.nome, e.profissional, e.telefone = "Studio Bella Pele", "Ana", "(11) 91234-5678"
         e.endereco, e.instagram = "Rua das Flores, 100 - São Paulo/SP", "@studiobellapele"
         e.save()
@@ -40,7 +40,7 @@ class Command(BaseCommand):
             e.definir_senha_financeiro("1234")
 
         def mat(nome, unidade, qtd, total, minimo):
-            m, criado = Material.objects.get_or_create(nome=nome, defaults={"unidade": unidade, "estoque_minimo": minimo})
+            m, criado = Material.objects.get_or_create(estudio=e, nome=nome, defaults={"unidade": unidade, "estoque_minimo": minimo})
             if criado:
                 movimentar(m, qtd, "entrada", custo_unitario=Decimal(total) / qtd, descricao="Estoque inicial")
             return m
@@ -56,7 +56,7 @@ class Command(BaseCommand):
         acido.save()
 
         def proc(nome, preco, minutos, retorno, cor, materiais):
-            p, _ = Procedimento.objects.get_or_create(nome=nome, defaults={
+            p, _ = Procedimento.objects.get_or_create(estudio=e, nome=nome, defaults={
                 "preco": preco, "duracao_min": minutos, "retorno_dias": retorno, "cor": cor,
                 "cuidados_pos": "Evite sol por 48 h, use protetor solar FPS 50 e não esfolie a pele por 5 dias."})
             for m, q in materiais:
@@ -73,19 +73,19 @@ class Command(BaseCommand):
                  ("Camila Rocha", date(1990, 11, 23), "11954321098"), ("Fernanda Dias", date(1985, 1, 30), "11943210987")]
         clientes = []
         for nome, nasc, fone in nomes:
-            c, _ = Cliente.objects.get_or_create(nome=nome, defaults={"nascimento": nasc, "telefone": fone,
+            c, _ = Cliente.objects.get_or_create(estudio=e, nome=nome, defaults={"nascimento": nasc, "telefone": fone,
                                                                       "como_conheceu": "Instagram", "cidade": "São Paulo", "uf": "SP"})
             Ficha.objects.get_or_create(cliente=c, defaults={"queixa_principal": "Manchas e textura da pele",
                                                              "tipo_pele": "mista", "fototipo": "III", "usa_protetor": True})
             clientes.append(c)
         Ficha.objects.filter(cliente=clientes[1]).update(alergias="Dipirona", acidos_retinoides=True)
 
-        if Agendamento.objects.exists():
+        if Agendamento.objects.filter(estudio=e).exists():
             self.stdout.write(self.style.WARNING("Já existiam atendimentos; só completei cadastros."))
             return
 
-        pix = FormaPagamento.objects.get(nome="PIX")
-        credito = FormaPagamento.objects.get(nome="Cartão de crédito à vista")
+        pix = FormaPagamento.objects.get(estudio=e, nome="PIX")
+        credito = FormaPagamento.objects.get(estudio=e, nome="Cartão de crédito à vista")
 
         def marcar(cliente, p, dia, hora, **extra):
             inicio = timezone.make_aware(datetime.combine(dia, time(hora)))
@@ -110,7 +110,7 @@ class Command(BaseCommand):
         marcar(clientes[4], peeling, hoje + timedelta(days=1), 9)
         marcar(clientes[2], drenagem, hoje + timedelta(days=2), 15, pacote=pacote, valor=0)
 
-        Lancamento.objects.create(tipo="saida", categoria="aluguel", descricao="Aluguel da sala", valor=Decimal("1200"),
+        Lancamento.objects.create(estudio=e, tipo="saida", categoria="aluguel", descricao="Aluguel da sala", valor=Decimal("1200"),
                                   data=hoje.replace(day=1))
-        Lancamento.objects.create(tipo="saida", categoria="marketing", descricao="Anúncio Instagram", valor=Decimal("150"))
+        Lancamento.objects.create(estudio=e, tipo="saida", categoria="marketing", descricao="Anúncio Instagram", valor=Decimal("150"))
         self.stdout.write(self.style.SUCCESS("Pronto! Entre com demo@agendu.local / Agendu#2026 (senha do financeiro: 1234)"))

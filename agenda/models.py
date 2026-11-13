@@ -22,7 +22,8 @@ class Procedimento(models.Model):
         ("#5b7fc7", "Azul"), ("#c4665a", "Terracota"), ("#7a8a5c", "Oliva"), ("#6b6b7b", "Cinza"),
     ]
 
-    nome = models.CharField(max_length=120, unique=True)
+    estudio = models.ForeignKey("core.Estudio", on_delete=models.CASCADE, related_name="procedimentos", verbose_name="espaço")
+    nome = models.CharField(max_length=120)
     descricao = models.TextField("descrição", blank=True)
     duracao_min = models.PositiveSmallIntegerField("duração (min)", default=60)
     preco = models.DecimalField("preço", max_digits=10, decimal_places=2, default=0)
@@ -37,6 +38,7 @@ class Procedimento(models.Model):
 
     class Meta:
         ordering = ["nome"]
+        constraints = [models.UniqueConstraint(fields=["estudio", "nome"], name="procedimento_nome_por_espaco")]
 
     def __str__(self):
         return self.nome
@@ -68,6 +70,7 @@ class ProcedimentoMaterial(models.Model):
 class Pacote(models.Model):
     """Pacote de sessões vendido para uma cliente (ex.: 10 sessões de drenagem)."""
 
+    estudio = models.ForeignKey("core.Estudio", on_delete=models.CASCADE, related_name="pacotes", verbose_name="espaço")
     cliente = models.ForeignKey("clientes.Cliente", on_delete=models.PROTECT, related_name="pacotes")
     procedimento = models.ForeignKey(Procedimento, on_delete=models.PROTECT, related_name="pacotes")
     sessoes = models.PositiveSmallIntegerField("número de sessões")
@@ -82,6 +85,21 @@ class Pacote(models.Model):
 
     def __str__(self):
         return f"{self.sessoes}x {self.procedimento} - {self.cliente}"
+
+    def clean_fields(self, exclude=None):
+        if not self.estudio_id and self.cliente_id:
+            self.estudio_id = self.cliente.estudio_id
+        super().clean_fields(exclude=exclude)
+
+    def save(self, *args, **kwargs):
+        if not self.estudio_id and self.cliente_id:
+            self.estudio_id = self.cliente.estudio_id
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        if self.cliente_id and self.procedimento_id and self.cliente.estudio_id != self.procedimento.estudio_id:
+            raise ValidationError("Cliente e procedimento precisam ser do mesmo espaço.")
 
     @property
     def usadas(self):
@@ -116,7 +134,7 @@ class Pacote(models.Model):
 
     @classmethod
     def com_saldo(cls, cliente, procedimento=None):
-        qs = cls.objects.filter(cliente=cliente).select_related("procedimento")
+        qs = cls.objects.filter(cliente=cliente, estudio_id=cliente.estudio_id).select_related("procedimento")
         if procedimento is not None:
             qs = qs.filter(procedimento=procedimento)
         return [p for p in qs if p.restantes > 0 and not p.vencido]
@@ -130,6 +148,7 @@ class Agendamento(models.Model):
     ]
     EM_ABERTO = (AGENDADO, CONFIRMADO)  # ocupam o horário e ainda vão acontecer
 
+    estudio = models.ForeignKey("core.Estudio", on_delete=models.CASCADE, related_name="agendamentos", verbose_name="espaço")
     cliente = models.ForeignKey("clientes.Cliente", on_delete=models.PROTECT, related_name="agendamentos")
     procedimento = models.ForeignKey(Procedimento, on_delete=models.PROTECT, related_name="agendamentos")
     inicio = models.DateTimeField("início")
@@ -153,6 +172,16 @@ class Agendamento(models.Model):
 
     def __str__(self):
         return f"{self.cliente} - {self.procedimento} ({timezone.localtime(self.inicio):%d/%m %H:%M})"
+
+    def clean_fields(self, exclude=None):
+        if not self.estudio_id and self.cliente_id:
+            self.estudio_id = self.cliente.estudio_id
+        super().clean_fields(exclude=exclude)
+
+    def save(self, *args, **kwargs):
+        if not self.estudio_id and self.cliente_id:
+            self.estudio_id = self.cliente.estudio_id
+        super().save(*args, **kwargs)
 
     @property
     def em_aberto(self):
@@ -179,7 +208,9 @@ class Agendamento(models.Model):
 
     def conflitos(self):
         """Outros atendimentos em aberto que se sobrepõem a este horário."""
-        qs = Agendamento.objects.filter(status__in=self.EM_ABERTO, inicio__lt=self.fim, fim__gt=self.inicio)
+        estudio_id = self.estudio_id or (self.cliente.estudio_id if self.cliente_id else None)
+        qs = Agendamento.objects.filter(estudio_id=estudio_id, status__in=self.EM_ABERTO,
+                                        inicio__lt=self.fim, fim__gt=self.inicio)
         if self.pk:
             qs = qs.exclude(pk=self.pk)
         return qs.select_related("cliente")
@@ -188,6 +219,8 @@ class Agendamento(models.Model):
         super().clean()
         if self.inicio and self.fim and self.fim <= self.inicio:
             raise ValidationError("O fim precisa ser depois do início.")
+        if self.cliente_id and self.procedimento_id and self.cliente.estudio_id != self.procedimento.estudio_id:
+            raise ValidationError("Cliente e procedimento precisam ser do mesmo espaço.")
         if self.inicio and self.fim and self.em_aberto:
             outro = self.conflitos().first()
             if outro:
