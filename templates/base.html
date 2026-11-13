@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#2a1838">
+  <meta name="theme-color" content="#4f46e5">
   <title>{% block titulo %}Agendu{% endblock %} · Agendu</title>
   <link rel="icon" type="image/svg+xml" href="{% static 'img/icone.svg' %}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static_versao 'css/app.css' %}">
   <script src="{% static_versao 'js/app.js' %}" defer></script>
 </head>
@@ -18,7 +18,7 @@
 {% with rota=request.path %}
 <div class="app">
   <aside class="lateral" id="lateral">
-    <a class="lateral-marca" href="{% url 'painel' %}" aria-label="Agendu - início"><img src="{% static 'img/logo-branco.svg' %}" alt="Agendu"></a>
+    <a class="lateral-marca" href="{% url 'painel' %}" aria-label="Agendu - início"><img src="{% static 'img/logo.svg' %}" alt="Agendu"></a>
     <nav aria-label="Menu principal">
       <a class="nav-item{% if rota == '/' %} ativo{% endif %}" href="{% url 'painel' %}"><svg class="ico"><use href="#i-painel"/></svg>Painel</a>
       <a class="nav-item{% if rota == '/agenda/' or rota == '/agenda/novo/' or '/agenda/' in rota and '/procedimentos' not in rota and '/pacotes' not in rota %} ativo{% endif %}" href="{% url 'agenda:semana' %}"><svg class="ico"><use href="#i-agenda"/></svg>Agenda</a>

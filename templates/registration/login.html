@@ -5,6 +5,7 @@
   <div>
     <form method="post" class="caixa-login">{% csrf_token %}
       <img class="logo" src="{% static 'img/logo.svg' %}" alt="Agendu">
+      <p class="slogan">AGENDAR. ORGANIZAR. CRESCER.</p>
       {% for m in messages %}<div class="erros-gerais">{{ m }}</div>{% endfor %}
       {% if form.non_field_errors %}<div class="erros-gerais">{{ form.non_field_errors|join:" " }}</div>{% endif %}
       <div class="campo" style="margin-bottom:12px"><label for="id_username">E-mail</label>{{ form.username }}</div>

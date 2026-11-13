@@ -11,9 +11,12 @@ base técnica. Não misturar código, banco nem usuários dos dois.
 ## Decisões
 - Django 5.2 LTS, templates + CSS próprio (sem framework JS), `static/js/app.js` com máscaras, CEP (ViaCEP),
   preenchimento do agendamento e comparação de fotos. SQLite em dev, PostgreSQL em produção (`DB_*`).
-- Marca **Agendu** ("by Ativix" discreto): berinjela `--primaria #3d2352` / `--primaria-escura #2a1838` e rosé
-  `--destaque #e2a48c` / `--destaque-escuro #c9785f`. Verde/laranja/vermelho só para status; verde WhatsApp só no
-  botão do WhatsApp. Fontes Manrope e JetBrains Mono. Logos SVG em `static/img/` (`logo.svg`, `logo-branco.svg`, `icone.svg`).
+- Marca **Agendu** (identidade definida pelo Alan em 13/11/2026; "by Ativix" discreto): índigo `--primaria #4f46e5`
+  (`--primaria-escura #3730a3`, `--primaria-clara #eef2ff`), verde `--destaque #10b981` (secundária, o ✓ da logo),
+  escuro `--escuro #0f172a`, neutro claro `#f1f5f9`, branco. Fontes **Inter** (texto) e **Plus Jakarta Sans** (títulos e
+  números). Slogan "AGENDAR. ORGANIZAR. CRESCER." (tela de entrada). Menu lateral claro. Logo: calendário índigo com ✓
+  verde (`static/img/logo.svg`, `logo-branco.svg` para fundo escuro, `icone.svg`). Laranja/vermelho só para status;
+  verde do WhatsApp só no botão do WhatsApp.
 - Celular primeiro: menu lateral vira gaveta e aparece a barra de baixo (Painel, Agenda, +, Clientes, Caixa).
 - **Todo o sistema exige login** (`core.middleware.LoginObrigatorioMiddleware`; livres só `/entrar/`, `/static/`, `/admin/`).
   Login **pelo e-mail** (`core/backends.EmailBackend`, sem diferença de maiúsculas; o nome de usuário não serve para entrar),
