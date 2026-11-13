@@ -85,6 +85,21 @@ class LoginTests(Base):
         r = self.client.post("/entrar/", {"username": "ana@estudio.com", "password": "senha-forte-123"})
         self.assertContains(r, "Muitas tentativas")
 
+    def test_manter_conectado(self):
+        self.client.logout()
+        self.client.post("/entrar/", {"username": "ana@estudio.com", "password": "senha-forte-123", "lembrar": "1"})
+        self.assertFalse(self.client.session.get_expire_at_browser_close())
+        self.client.logout()
+        self.client.post("/entrar/", {"username": "ana@estudio.com", "password": "senha-forte-123"})
+        self.assertTrue(self.client.session.get_expire_at_browser_close())  # sem marcar: sai ao fechar o navegador
+
+    def test_tela_de_entrada(self):
+        self.client.logout()
+        r = self.client.get("/entrar/")
+        for texto in ("Bem-vindo de volta", "Manter conectado", "Esqueceu a senha?", "Entrar na plataforma",
+                      "AGENDAR. ORGANIZAR. CRESCER."):
+            self.assertContains(r, texto)
+
     def test_entra_pelo_email_e_nao_pelo_usuario(self):
         self.client.logout()
         r = self.client.get("/entrar/")

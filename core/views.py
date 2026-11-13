@@ -14,6 +14,8 @@ from agenda.consultas import aniversariantes, retornos
 from agenda.models import Agendamento, Pacote
 from estoque.models import Material
 
+from django.contrib.auth.views import LoginView
+
 from . import financeiro
 from .forms import CriarSenhaFinanceiroForm, EstudioForm, SenhaFinanceiroForm, TrocarSenhaFinanceiroForm
 
@@ -138,3 +140,15 @@ def busca(request):
     if achados.count() == 1:
         return redirect("clientes:detalhe", achados.first().pk)
     return redirect(f"/clientes/?q={termo}")
+
+
+class EntrarView(LoginView):
+    """Login com "Manter conectado": desmarcado, a sessão acaba quando o navegador fecha."""
+
+    redirect_authenticated_user = True
+
+    def form_valid(self, form):
+        resposta = super().form_valid(form)
+        if not self.request.POST.get("lembrar"):
+            self.request.session.set_expiry(0)
+        return resposta

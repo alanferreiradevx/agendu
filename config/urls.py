@@ -8,7 +8,7 @@ from core.forms import LoginForm
 
 urlpatterns = [
     path("", core_views.painel, name="painel"),
-    path("entrar/", auth_views.LoginView.as_view(authentication_form=LoginForm, redirect_authenticated_user=True), name="login"),
+    path("entrar/", core_views.EntrarView.as_view(authentication_form=LoginForm), name="login"),
     path("sair/", auth_views.LogoutView.as_view(), name="logout"),
     path("senha/", auth_views.PasswordChangeView.as_view(success_url="/senha/ok/"), name="senha_trocar"),
     path("senha/ok/", auth_views.PasswordChangeDoneView.as_view(), name="password_change_done"),

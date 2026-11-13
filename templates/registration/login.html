@@ -1,19 +1,65 @@
 {% extends "base.html" %}{% load static %}
 {% block titulo %}Entrar{% endblock %}
 {% block corpo %}
-<div class="tela-login">
-  <div>
-    <form method="post" class="caixa-login">{% csrf_token %}
-      <img class="logo" src="{% static 'img/logo.svg' %}" alt="Agendu">
-      <p class="slogan">AGENDAR. ORGANIZAR. CRESCER.</p>
-      {% for m in messages %}<div class="erros-gerais">{{ m }}</div>{% endfor %}
-      {% if form.non_field_errors %}<div class="erros-gerais">{{ form.non_field_errors|join:" " }}</div>{% endif %}
-      <div class="campo" style="margin-bottom:12px"><label for="id_username">E-mail</label>{{ form.username }}</div>
-      <div class="campo"><label for="id_password">Senha</label>{{ form.password }}</div>
+<div class="login">
+  <aside class="login-marca">
+    <svg class="login-formas" viewBox="0 0 600 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <circle cx="560" cy="120" r="190" fill="#6366f1" opacity=".55"/>
+      <circle cx="610" cy="760" r="260" fill="#3730a3" opacity=".7"/>
+      <circle cx="520" cy="690" r="120" fill="#10b981" opacity=".9"/>
+      <circle cx="70" cy="40" r="90" fill="#ffffff" opacity=".06"/>
+    </svg>
+    <div class="login-marca-conteudo">
+      <img class="login-logo" src="{% static 'img/logo-branco.svg' %}" alt="Agendu">
+      <p class="login-slogan">AGENDAR. ORGANIZAR. CRESCER.</p>
+      <h2 class="login-frase">Seu tempo vale.<br><span>A gente organiza.</span></h2>
+      <ul class="login-pilares">
+        <li><span><svg class="ico"><use href="#i-agenda"/></svg></span><div><strong>Agenda inteligente</strong>Horários, lembretes e retornos no WhatsApp.</div></li>
+        <li><span><svg class="ico"><use href="#i-clientes"/></svg></span><div><strong>Clientes em um só lugar</strong>Ficha, evolução e fotos de antes e depois.</div></li>
+        <li><span><svg class="ico"><use href="#i-grafico"/></svg></span><div><strong>Caixa e estoque</strong>Faturamento, despesas e materiais sob controle.</div></li>
+      </ul>
+    </div>
+  </aside>
+
+  <main class="login-lado">
+    <form method="post" class="login-caixa" novalidate>{% csrf_token %}
+      <img class="login-logo-celular" src="{% static 'img/logo.svg' %}" alt="Agendu">
+      <h1>Bem-vindo de volta! 👋</h1>
+      <p class="suave">Entre na sua conta para continuar.</p>
+
+      {% for m in messages %}<div class="login-aviso"><svg class="ico"><use href="#i-alerta"/></svg>{{ m }}</div>{% endfor %}
+      {% if form.non_field_errors %}<div class="login-aviso"><svg class="ico"><use href="#i-alerta"/></svg>{{ form.non_field_errors|join:" " }}</div>{% endif %}
+
+      <label class="login-rotulo" for="id_username">E-mail</label>
+      <div class="login-campo">
+        <svg class="ico"><use href="#i-email"/></svg>
+        <input type="email" name="username" id="id_username" value="{{ form.username.value|default:'' }}"
+               placeholder="seu@email.com" autocomplete="email" autofocus required>
+      </div>
+
+      <div class="login-linha">
+        <label class="login-rotulo" for="id_password">Senha</label>
+        <a href="#" class="login-link" onclick="document.getElementById('esqueci').hidden = false; return false;">Esqueceu a senha?</a>
+      </div>
+      <div class="login-campo">
+        <svg class="ico"><use href="#i-cadeado"/></svg>
+        <input type="password" name="password" id="id_password" placeholder="Digite sua senha" autocomplete="current-password" required>
+        <button type="button" class="login-olho" aria-label="Mostrar a senha" onclick="
+          var c = document.getElementById('id_password'), ver = c.type === 'password';
+          c.type = ver ? 'text' : 'password';
+          this.setAttribute('aria-label', ver ? 'Esconder a senha' : 'Mostrar a senha');
+          this.querySelector('use').setAttribute('href', ver ? '#i-olho-fechado' : '#i-olho');">
+          <svg class="ico"><use href="#i-olho"/></svg>
+        </button>
+      </div>
+      <p id="esqueci" class="login-dica" hidden>Peça ao administrador do Agendu um <strong>link para criar uma senha nova</strong>. Ele chega pelo WhatsApp e vale por 7 dias.</p>
+
+      <label class="login-lembrar"><input type="checkbox" name="lembrar" value="1" checked> Manter conectado</label>
       <input type="hidden" name="next" value="{{ next }}">
-      <button class="btn" type="submit">Entrar</button>
+      <button class="btn login-botao" type="submit">Entrar na plataforma <span aria-hidden="true">→</span></button>
+      <p class="login-rodape">Ainda não tem acesso? Fale com o administrador.</p>
     </form>
-    <p class="rodape-login">Agendu · by Ativix</p>
-  </div>
+    <p class="login-assinatura">Agendu · by Ativix</p>
+  </main>
 </div>
 {% endblock %}
